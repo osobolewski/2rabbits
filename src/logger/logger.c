@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include "colors.h"
+#include "string.h"
+
 
 void logger(int level, const char* message, const char* module) {
     char* tag;
@@ -10,7 +12,11 @@ void logger(int level, const char* message, const char* module) {
     time_t now;
     time(&now);
 
-    if (level < LOG_DBG || level > LOG_ERR || message == "" || message == NULL) {
+    if (level < VERBOSITY) {
+        return;
+    }
+
+    if (level < LOG_DBG || level > LOG_ERR || !strcmp(message, "")) {
         return;
     } 
 
@@ -34,13 +40,16 @@ void logger(int level, const char* message, const char* module) {
         break;    
     }
 
-    printf("%s [", ctime(&now));
-    printf(color);
-    printf("%s", ctime(&now));
-    printf(COLOR_RESET);
+    const char* time_str = ctime(&now); 
+    // hopefully days and moths are always 3 char long...
+    printf("%.*s", strlen(time_str) - 11 - 4 - 1, time_str + 11);
+    printf("[%s", color);
+    printf("%s", tag);
+    printf("%s", COLOR_RESET);
+
     if (module != NULL) {
-        printf("](%s): %s\n", tag, module, message);
+        printf("](%s): %s\n", module, message);
     } else {
-        printf("]: %s\n", tag, message);
+        printf("]: %s\n", message);
     }
 }

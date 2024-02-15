@@ -1,6 +1,8 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#define VERBOSITY   0
+
 #define LOG_DBG     0
 #define LOG_INFO    1
 #define LOG_WARN    2
