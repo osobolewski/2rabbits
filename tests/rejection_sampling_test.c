@@ -1,5 +1,7 @@
-#include "rejection_sampling.h"
-#include "logger.h"
+#include "../src/algorithms/rejection_sampling.h"
+#include "../src/logger/logger.h"
+#include "../src/utils.h"
+
 
 int main(int argc, char* argv[]) {
     logger(LOG_INFO, "Starting rejection sampling tests...", "TEST");
@@ -31,8 +33,8 @@ int main(int argc, char* argv[]) {
 
     logger(LOG_INFO, "Trying encryption...", "TEST");
     int m = 18;
-    char to_ecnrypt[4] = "abcd";
-    BIGNUM* k = rs_encrypt(m, to_ecnrypt, public_key, group);
+    const char to_encrypt[5] = "abcd";
+    BIGNUM* k = rs_encrypt(m, to_encrypt, public_key, group);
 
     logger(LOG_DBG, "Calculating r = k*G...", "TEST");
     EC_POINT* r = EC_POINT_new(group);

@@ -13,6 +13,6 @@ add_library(rsampling STATIC src/algorithms/rejection_sampling.c src/algorithms/
 
 target_include_directories(rsampling PUBLIC src/algorithms)
 
-add_executable(testsampling tests/rejection_sampling_test.c src/algorithms/rejection_sampling.c src/algorithms/rejection_sampling.h src/logger/logger.h src/logger/logger.c)
+add_executable(testsampling tests/rejection_sampling_test.c src/algorithms/rejection_sampling.c src/algorithms/rejection_sampling.h src/logger/logger.h src/logger/logger.c src/utils.h src/utils.c)
 target_link_libraries(testsampling OpenSSL::Crypto)
 target_include_directories(testsampling PUBLIC src/algorithms src/logger)

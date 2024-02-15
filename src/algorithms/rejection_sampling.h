@@ -8,11 +8,8 @@
  */
 BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group);
 
-/* Decrypts a bit from protocol P output r with a private scalar y */
+/* 
+ * Decrypts m-bits from protocol P output r with a private scalar y 
+ * \return char array of plaintext bytes (it does not have to be a string)
+*/
 char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group);
-
-int compare_n_lsb(const char* a, size_t len_a, const char* b, size_t len_b, int n);
-
-char* hash(char** inputs, int inputs_len, int* digest_len);
-
-char* chrs2hex(const char* bytes, size_t len);
