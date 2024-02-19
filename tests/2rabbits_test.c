@@ -1,18 +1,9 @@
-#include "../src/algorithms/rejection_sampling.h"
+#include "../src/algorithms/2rabbits.h"
 #include "../src/logger/logger.h"
 #include "../src/utils.h"
 #include <assert.h>
 
-
-int chrcmp(const char* s1, const char* s2, const int l) {
-    int c = 0;
-    for (int i = 0; i < l; ++i) {
-        c |= s1[i] ^ s2[i];
-    }
-    return c != 0;
-}
-
-int rs_test(int m, const char* plaintext, int len) {
+int two_rabbits_test(int b) {
     EC_GROUP* group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BIGNUM* private_key = BN_new();
     BIGNUM* order = BN_new();
@@ -39,24 +30,17 @@ int rs_test(int m, const char* plaintext, int len) {
     EC_KEY_set_public_key(keypair, public_key);
 
     logger(LOG_DBG, "Trying encryption...", "TEST");
-    BIGNUM* k = rs_encrypt(m, plaintext, public_key, group);
+    BIGNUM* k = two_rabbits_encrypt(b, public_key, group);
 
     logger(LOG_DBG, "Calculating r = k*G...", "TEST");
     EC_POINT* r = EC_POINT_new(group);
     EC_POINT_mul(group, r, k, NULL, NULL, ctx);
 
     logger(LOG_DBG, "Trying decryption...", "TEST");
-    char* plaintext_recovered = rs_decrypt(m, r, private_key, group);
+    int bit_recovered = two_rabbits_decrypt(r, private_key, group);
 
-    logger(LOG_DBG, "Decryption result:", "TEST");
-    int pt_len = m/8 + (m % 8 == 0 ? 0 : 1);
+    assert(bit_recovered == b);
 
-    //printf("%s\n", plaintext_recovered);
-    logger(LOG_DBG, chr_2_hex(plaintext_recovered, pt_len), "TEST");
-
-    assert(compare_n_lsb(plaintext, len, plaintext_recovered, pt_len, m) == 0);
-
-    free(plaintext_recovered);
     BN_free(k);
     EC_POINT_free(r);
     EC_KEY_free(keypair);
@@ -70,20 +54,16 @@ int rs_test(int m, const char* plaintext, int len) {
 int main(int argc, char* argv[]) {   
     set_verbose(LOG_INFO);
 
-    logger(LOG_INFO, "Starting rejection sampling tests...", "TEST");
+    logger(LOG_INFO, "Starting 2 rabbits tests...", "TEST");
 
-    const char bts_string[] = {(char) 4, (char) 1, (char) 2, (char) 0};
-
-    const char* test_strings[] = {"abcd", "test", "a longish string", "ab", "zzzz", bts_string};
-    
-    for (int m = 1; m < 17; ++m) {
-        for (int i = 0; i < 6; ++i) {
+    for (int i = 0; i < 10000; ++i) {
+        for (int b = 0; b < 2; ++b) {
             char print_string[255];
-            sprintf(print_string, "Testing for m = %d and str = %s", m, test_strings[i]);
+            sprintf(print_string, "Testing for b = %d", b);
             logger(LOG_DBG, print_string, "TEST");
-            rs_test(m, test_strings[i], strlen(test_strings[i]));
+            two_rabbits_test(b);
         }
     }
 
-    logger(LOG_INFO, "Rejection sampling tests done", "TEST");
+    logger(LOG_INFO, "2 rabbits tests done", "TEST");
 }

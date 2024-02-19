@@ -1,16 +1,18 @@
 #include "utils.h"
 #include "logger/logger.h"
 #include <string.h>
+#include <openssl/evp.h>
+#include <openssl/ec.h>
 
 
-char* chrs2hex(const char* bytes, size_t len) {
+char* chr_2_hex(const char* bytes, size_t len) {
     const char hex[] = "0123456789ABCDEF";
 
     static char result[255];
     result[0] = '\0';
 
     // very lazy
-    for (int i = 0; i < len && 1 < 255; ++i) {
+    for (int i = 0; i < (int)len && 1 < 255; ++i) {
         char byte[3];
         byte[0] = hex[(unsigned char)bytes[i] >> 4]; // upper nibble
         byte[1] = hex[(unsigned char)bytes[i] & (0b1111)]; // lower nibble
@@ -47,7 +49,7 @@ int compare_n_lsb(const char* a, size_t len_a, const char* b, size_t len_b, int 
     return comparison != 0;
 }
 
-char* hash(char** inputs, int inputs_len, int* digest_len) {
+char* hash(const char** inputs, int inputs_arr_len, const int* inputs_lens, int* digest_len) {
     EVP_MD_CTX* mdctx = EVP_MD_CTX_create();
 
     if (mdctx == NULL) {
@@ -65,8 +67,8 @@ char* hash(char** inputs, int inputs_len, int* digest_len) {
         return NULL;
     }
 
-    for (int i = 0; i < inputs_len; ++i) {
-        int l = strlen(inputs[i]);
+    for (int i = 0; i < inputs_arr_len; ++i) {
+        int l = inputs_lens[i];
         ok = EVP_DigestUpdate(mdctx, inputs[i], l);
         if (ok <= 0) {
             EVP_MD_CTX_destroy(mdctx);
@@ -89,3 +91,94 @@ char* hash(char** inputs, int inputs_len, int* digest_len) {
 
     return digest;
 }
+
+void parse_key(EVP_PKEY* pkey) {
+    size_t pkey_len = 0;
+    char* pkey_buffer;
+    
+    // get length of public key (it will be written to pkey_len)
+    EVP_PKEY_get_raw_public_key(pkey, NULL, &pkey_len);
+    pkey_buffer = (char*)malloc(pkey_len * sizeof(char));
+
+    // get raw public key into the buffer
+    EVP_PKEY_get_raw_public_key(pkey, pkey_buffer, &pkey_len);
+
+    // gey key params
+    OSSL_PARAM* params;
+    EVP_PKEY_todata(pkey, EVP_PKEY_KEYPAIR, &params);
+
+    int* group_name = (int*)OSSL_PARAM_locate(params, "group")->data;
+    EC_GROUP* group = EC_GROUP_new_by_curve_name(*group_name);
+    BIGNUM* p = (BIGNUM*)OSSL_PARAM_locate(params, "p")->data;
+
+    EC_POINT* Y;
+    EC_POINT_oct2point(group, Y, pkey_buffer, pkey_len, NULL);
+
+    free(pkey_buffer);
+    OSSL_PARAM_free(params);
+    EC_GROUP_free(group);
+    EC_POINT_free(Y);
+}
+
+char* BN_print_str(BIGNUM* a) {
+    char* buffer;
+    static char result[100]; 
+    size_t buffer_size;
+
+    FILE* file_stream = open_memstream(&buffer, &buffer_size);
+    BN_print_fp(file_stream, a);
+    fclose(file_stream); 
+
+    strcpy(result, buffer);
+
+    free(buffer);
+
+    // return a static string
+    return result;
+}
+
+int chr_cmp(const char* c1, const char* c2, int len) {
+    while(len && (*c1 == *c2)) {
+        c1++;
+        c2++;
+        len--;
+    }
+    return *(const unsigned char*)c1 - *(const unsigned char*)c2;
+}
+
+void swap(int* arr, int i, int j) {
+    int tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+void chr_swap(char** arr, int i, int j) {
+    char* tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices) {
+    // if pointer indices is provided, returns an array of 
+    // original indices in the sorted array
+    // indices is expected to be allocated
+    if (indices) {
+        for (int i = 0; i < arr_len; ++i) {
+            indices[i] = i;
+        }
+    }
+
+    // bubble sort, the arrays are expected 
+    // to be length 2 anyway
+    for(int i = 0; i < arr_len - 1; i++){
+        for(int j = 0; j < arr_len - i - 1; j++){
+            if(chr_cmp(arr[i], arr[j+1], cmp_len) > 0){
+                if (indices) {
+                    swap(indices, i, j+1);
+                }
+                chr_swap(arr, i, j+1);
+            }
+        }
+    }
+}
+

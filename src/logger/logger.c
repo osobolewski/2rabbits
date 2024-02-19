@@ -5,14 +5,19 @@
 #include "colors.h"
 #include "string.h"
 
+static int verbosity = 1;
+
+void set_verbose(int level) {
+    verbosity = level;
+}
 
 void logger(int level, const char* message, const char* module) {
-    char* tag;
-    char* color;
+    const char* tag;
+    const char* color;
     time_t now;
     time(&now);
 
-    if (level < VERBOSITY) {
+    if (level < verbosity) {
         return;
     }
 
@@ -42,7 +47,7 @@ void logger(int level, const char* message, const char* module) {
 
     const char* time_str = ctime(&now); 
     // hopefully days and moths are always 3 char long...
-    printf("%.*s", strlen(time_str) - 11 - 4 - 1, time_str + 11);
+    printf("%.*s", (int)strlen(time_str) - 11 - 4 - 1, time_str + 11);
     printf("[%s", color);
     printf("%s", tag);
     printf("%s", COLOR_RESET);

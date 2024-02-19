@@ -35,6 +35,13 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
         return NULL;
     }
 
+    ok = BN_dec2bn(&one, "1");
+    if (ok <= 0) {
+        RS_ENCRYPT_CLEANUP;
+        logger(LOG_ERR, "Creating a BIGNUM 1 failed", "RS");
+        return NULL;
+    }
+
     k = BN_secure_new();
     if (k == NULL) {
         RS_ENCRYPT_CLEANUP;
@@ -72,9 +79,10 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
             return NULL;
         }
 
-        char* input[2] = {encoded_R, "00"};
+        const char* input[2] = {encoded_R, "00"};
         int digest_len;
-        char* digest = hash(input, 2, &digest_len);
+        const int input_lens[2] = {(int)len, 3};
+        char* digest = hash(input, 2, input_lens, &digest_len);
 
         if (digest == NULL) {
             RS_ENCRYPT_CLEANUP;
@@ -82,11 +90,11 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
             return NULL;
         }
 
-        char* hex = chrs2hex(msg, strlen(msg));
+        char* hex = chr_2_hex(msg, strlen(msg));
         logger(LOG_DBG, "Message:", "RS");
         logger(LOG_DBG, hex, "RS");
 
-        hex = chrs2hex(digest, digest_len);
+        hex = chr_2_hex(digest, digest_len);
         logger(LOG_DBG, "Hash digest:", "RS");
         logger(LOG_DBG, hex, "RS");
 
@@ -97,14 +105,6 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
             // k = k + 1
             BIGNUM* k_plus_one = BN_new();
 
-            ok = BN_dec2bn(&one, "1");
-            if (ok <= 0) {
-                RS_ENCRYPT_CLEANUP;
-                BN_free(k_plus_one);
-                logger(LOG_ERR, "Creating a BIGNUM 1 failed", "RS");
-                return NULL;
-            }
-
             ok = BN_add(k_plus_one, k, one);
             if (ok <= 0) {
                 RS_ENCRYPT_CLEANUP;
@@ -113,6 +113,8 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
                 return NULL;
             }
 
+            // it technically can be done without freeing with BN_add(k, k, one)
+            // but I don't wanna risk memory leaks...
             BN_free(k);
             k = k_plus_one;
             
@@ -136,7 +138,7 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
     } while (comparison);
 
     logger(LOG_INFO, "Found k:", "RS");
-    BN_print_fp(stdout, k);
+    logger(LOG_INFO, BN_print_str(k), "RS");
     
     EC_POINT_free(R);
     BN_CTX_free(ctx);
@@ -181,11 +183,12 @@ char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
         return NULL;
     }
 
-    char* input[2] = {encoded_R, "00"};
+    const char* input[2] = {encoded_R, "00"};
     int digest_len;
-    char* digest = hash(input, 2, &digest_len);
+    const int input_lens[2] = {(int)len, 3};
+    char* digest = hash(input, 2, input_lens, &digest_len);
 
-    char* hex = chrs2hex(digest, digest_len);
+    const char* hex = chr_2_hex(digest, digest_len);
     logger(LOG_DBG, "Hash digest:", "RS");
     logger(LOG_DBG, hex, "RS");
 
@@ -221,30 +224,4 @@ char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     return plaintext;
 }
 
-/*void parse_key(EVP_PKEY* pkey) {
-    int pkey_len = 0;
-    char* pkey_buffer;
-    
-    // get length of public key (it will be written to pkey_len)
-    EVP_PKEY_get_raw_public_key(pkey, NULL, &pkey_len);
-    pkey_buffer = malloc(pkey_len * sizeof(char));
 
-    // get raw public key into the buffer
-    EVP_PKEY_get_raw_public_key(pkey, pkey_buffer, &pkey_len);
-
-    // gey key params
-    OSSL_PARAM* params;
-    EVP_PKEY_todata(pkey, EVP_PKEY_KEYPAIR, &params);
-
-    char* group_name = OSSL_PARAM_locate(params, "group")->data;
-    EC_GROUP* group = EC_GROUP_new_by_curve_name(group_name);
-    BIGNUM* p = OSSL_PARAM_locate(params, "p")->data;
-
-    EC_POINT* Y;
-    EC_POINT_oct2point(group, Y, pkey_buffer, pkey_len, NULL);
-
-    free(pkey_buffer);
-    OSSL_PARAM_free(params);
-    EC_GROUP_free(group);
-    EC_POINT_free(Y);
-}*/
