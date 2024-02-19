@@ -54,3 +54,5 @@ dkms.conf
 build/
 bin/
 .vscode/
+
+callgrind*

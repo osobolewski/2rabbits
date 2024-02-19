@@ -7,7 +7,7 @@
 
 
 BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
-    BIGNUM* k = BN_new();
+    BIGNUM* k = BN_secure_new();
     BIGNUM* order = BN_new();
     BIGNUM* one = BN_new();
     BN_CTX* ctx = BN_CTX_new();
@@ -39,13 +39,6 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
     if (ok <= 0) {
         RS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Creating a BIGNUM 1 failed", "RS");
-        return NULL;
-    }
-
-    k = BN_secure_new();
-    if (k == NULL) {
-        RS_ENCRYPT_CLEANUP;
-        logger(LOG_ERR, "BIGNUM allocation failure for k", "RS");
         return NULL;
     }
 

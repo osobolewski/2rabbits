@@ -5,8 +5,8 @@
 
 
 BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
-    BIGNUM* kappa = BN_new();
-    BIGNUM* kappa_prim = BN_new();
+    BIGNUM* kappa = BN_secure_new();
+    BIGNUM* kappa_prim = BN_secure_new();
     BIGNUM* minus_one = BN_new();
     BIGNUM* order = BN_new();
     BN_CTX* ctx = BN_CTX_new();
@@ -43,20 +43,6 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
         return NULL;
     }
 
-    kappa = BN_secure_new();
-    if (kappa == NULL) {
-        TWOR_ENCRYPT_CLEANUP;
-        logger(LOG_ERR, "BIGNUM allocation failure for kappa", "2R");
-        return NULL;
-    }
-
-    kappa_prim = BN_secure_new();
-    if (kappa_prim == NULL) {
-        TWOR_ENCRYPT_CLEANUP;
-        logger(LOG_ERR, "BIGNUM allocation failure for kappa_prim", "2R");
-        return NULL;
-    }
-
     // kappa <-R {0, order}
     ok = BN_priv_rand_range(kappa, order);
     if (ok <= 0) {
@@ -81,7 +67,7 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
     }
 
     // Zeta' = -1*Zeta = kappa_prim*Y
-    ok = EC_POINT_mul(group, zeta_prim, NULL, Y, kappa_prim, ctx);
+    ok = EC_POINT_mul(group, zeta_prim, NULL, zeta, minus_one, ctx);
     if (ok <= 0) {
         TWOR_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Calculating Zeta' = kappa'*Y failed", "2R");
@@ -112,12 +98,10 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
             return NULL;
         }
 
-        logger(LOG_DBG, chr_2_hex(encoded_Zeta, len), "2R");
-
         const char* input[2] = {encoded_Zeta, "00"};
         const int input_lens[2] = {(int)len, 3};
         char* digest = hash(input, 2, input_lens, &digest_len);
-        logger(LOG_DBG, chr_2_hex(digest, digest_len), "2R");
+
         hashes[i] = digest;
     }
 
@@ -163,6 +147,7 @@ int two_rabbits_decrypt(EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
         return -1;
     }
 
+    BN_free(minus_one);
     ok = BN_dec2bn(&minus_one, "-1");
     if (ok <= 0) {
         TWOR_DECRYPT_CLEANUP;
