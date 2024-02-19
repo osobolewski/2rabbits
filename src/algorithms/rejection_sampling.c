@@ -96,21 +96,13 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
         
         if (comparison) {
             // k = k + 1
-            BIGNUM* k_plus_one = BN_new();
-
-            ok = BN_add(k_plus_one, k, one);
+            ok = BN_add(k, k, one);
             if (ok <= 0) {
                 RS_ENCRYPT_CLEANUP;
-                BN_free(k_plus_one);
                 logger(LOG_ERR, "Calculating k = k + 1 failed", "RS");
                 return NULL;
             }
 
-            // it technically can be done without freeing with BN_add(k, k, one)
-            // but I don't wanna risk memory leaks...
-            BN_free(k);
-            k = k_plus_one;
-            
             EC_POINT* R_plus_Y = EC_POINT_new(group);
             
             // R = R + Y
