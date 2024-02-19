@@ -48,11 +48,11 @@ int rs_test(int m, const char* plaintext, int len) {
     logger(LOG_DBG, "Trying decryption...", "TEST");
     char* plaintext_recovered = rs_decrypt(m, r, private_key, group);
 
-    logger(LOG_DBG, "Decryption result:", "TEST");
+    logger(LOG_INFO, "Decryption result:", "TEST");
     int pt_len = m/8 + (m % 8 == 0 ? 0 : 1);
 
     //printf("%s\n", plaintext_recovered);
-    logger(LOG_DBG, chr_2_hex(plaintext_recovered, pt_len), "TEST");
+    logger(LOG_INFO, chr_2_hex(plaintext_recovered, pt_len), "TEST");
 
     assert(compare_n_lsb(plaintext, len, plaintext_recovered, pt_len, m) == 0);
 
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 
     logger(LOG_INFO, "Starting rejection sampling tests...", "TEST");
 
-    const char bts_string[] = {(char) 4, (char) 1, (char) 2, (char) 0};
+    const char bts_string[] = {(char) 4, (char) 1, (char) 2, (char) 3, (char) 4, (char) 0};
 
     const char* test_strings[] = {"abcd", "test", "a longish string", "ab", "zzzz", bts_string};
     
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 6; ++i) {
             char print_string[255];
             sprintf(print_string, "Testing for m = %d and str = %s", m, test_strings[i]);
-            logger(LOG_DBG, print_string, "TEST");
+            logger(LOG_INFO, print_string, "TEST");
             rs_test(m, test_strings[i], strlen(test_strings[i]));
         }
     }

@@ -37,3 +37,5 @@ int chr_cmp(const char* c1, const char* c2, int len);
  * indices must point to preallocated memory.
 */
 void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices);
+
+char* recover_n_lsbs(const char* arr, int len, int n);

@@ -177,30 +177,30 @@ char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     logger(LOG_DBG, "Hash digest:", "RS");
     logger(LOG_DBG, hex, "RS");
 
-    char* plaintext;
-    int starting_index;
+    char* plaintext = recover_n_lsbs(digest, digest_len, m);
+    // int starting_index;
 
-    if (m % 8 == 0) {
-        plaintext = (char*)malloc((m/8 + 1) * sizeof(char));
-        starting_index = digest_len - m/8;
+    // if (m % 8 == 0) {
+    //     plaintext = (char*)malloc((m/8 + 1) * sizeof(char));
+    //     starting_index = digest_len - m/8;
         
-        for (int i = starting_index; i < digest_len; ++i) {
-            plaintext[i - starting_index] = digest[i];
-        }
-        // technically it doesnt have to be a string
-        // but better safe than sorry.
-        plaintext[digest_len - starting_index] = '\0';
-    } else {
-        // we need m%8 lsbits of another byte
-        plaintext = (char*)malloc((m/8 + 2) * sizeof(char));
-        starting_index = digest_len - m/8 - 1;
+    //     for (int i = starting_index; i < digest_len; ++i) {
+    //         plaintext[i - starting_index] = digest[i];
+    //     }
+    //     // technically it doesnt have to be a string
+    //     // but better safe than sorry.
+    //     plaintext[digest_len - starting_index] = '\0';
+    // } else {
+    //     // we need m%8 lsbits of another byte
+    //     plaintext = (char*)malloc((m/8 + 2) * sizeof(char));
+    //     starting_index = digest_len - m/8 - 1;
 
-        for (int i = starting_index; i < digest_len; ++i) {
-            plaintext[i - starting_index] = digest[i];
-        }
-        plaintext[digest_len - starting_index] = '\0';
-        plaintext[0] = plaintext[0] & ((1 << m%8) - 1);
-    }
+    //     for (int i = starting_index; i < digest_len; ++i) {
+    //         plaintext[i - starting_index] = digest[i];
+    //     }
+    //     plaintext[digest_len - starting_index] = '\0';
+    //     plaintext[0] = plaintext[0] & ((1 << m%8) - 1);
+    // }
     
     free(digest);
     EC_POINT_free(R);

@@ -182,3 +182,29 @@ void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices) {
     }
 }
 
+char* recover_n_lsbs(const char* arr, int len, int n) {
+    char* buffer;
+    
+    // If n is not divisible by 8, then we need 
+    // to allocate one additional byte
+    // and recover n%8 bits from it
+    
+    // It can be done with an if...
+    // I like this trick more though
+    buffer = (char*)malloc((n/8 + 1 + (n % 8 != 0)) * sizeof(char));
+    int starting_index = len - n/8 - ((n % 8 != 0));
+    
+    for (int i = starting_index; i < len; ++i) {
+        buffer[i - starting_index] = arr[i];
+    }
+
+    // technically it does not have to be a string
+    // but it usually is
+    buffer[len - starting_index] = '\0';
+    
+    // recover the last n%8 bits if necessary
+    // if 8|n then the bit mask is 1111 1111 
+    buffer[0] = buffer[0] & ((1 << (n % 8 + 8 * (n % 8 == 0))) - 1);
+
+    return buffer;
+}

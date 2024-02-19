@@ -14,6 +14,8 @@ add_library(tworabbits
                 src/algorithms/2rabbits.c 
                 src/algorithms/rejection_sampling.c 
                 src/algorithms/rejection_sampling.h 
+                src/algorithms/advanced_sampling.c
+                src/algorithms/advanced_sampling.h
                 src/logger/logger.h 
                 src/logger/logger.c 
                 src/utils.h 
