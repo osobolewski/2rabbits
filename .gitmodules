@@ -1,0 +1,3 @@
+[submodule "dependencies/Format-Preserving-Encryption"]
+	path = dependencies/Format-Preserving-Encryption
+	url = https://github.com/0NG/Format-Preserving-Encryption.git
