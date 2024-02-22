@@ -39,7 +39,7 @@ int rs_test(int m, const char* plaintext, int len) {
     EC_KEY_set_public_key(keypair, public_key);
 
     logger(LOG_DBG, "Trying encryption...", "TEST");
-    BIGNUM* k = rs_encrypt(m, plaintext, public_key, group);
+    BIGNUM* k = rs_encrypt(m, plaintext, strlen(plaintext), public_key, group);
 
     logger(LOG_DBG, "Calculating r = k*G...", "TEST");
     EC_POINT* r = EC_POINT_new(group);
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
 
     logger(LOG_INFO, "Starting rejection sampling tests...", "TEST");
 
-    const char bts_string[] = {(char) 4, (char) 1, (char) 2, (char) 3, (char) 4, (char) 0};
+    const char bts_string[] = {(char) 4, (char) 1, (char) -123, (char) -101, (char) -50, (char) 0};
 
     const char* test_strings[] = {"abcd", "test", "a longish string", "ab", "zzzz", bts_string};
     

@@ -9,6 +9,12 @@ set(OPENSSL_ROOT_DIR /usr/include/openssl/)
 set(OPENSSL_CRYPTO_LIBRARY /usr/lib/libcrypto.so)
 find_package(OpenSSL REQUIRED)
 
+add_library(libfpe SHARED IMPORTED)
+set_target_properties(libfpe PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/dependencies/Format-Preserving-Encryption/libfpe.so"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/dependencies/Format-Preserving-Encryption/src"
+)
+
 add_library(tworabbits 
                 src/algorithms/2rabbits.h 
                 src/algorithms/2rabbits.c 
@@ -20,7 +26,7 @@ add_library(tworabbits
                 src/logger/logger.c 
                 src/utils.h 
                 src/utils.c)
-target_link_libraries(tworabbits OpenSSL::Crypto)
+target_link_libraries(tworabbits OpenSSL::Crypto libfpe)
 target_include_directories(tworabbits PUBLIC src/algorithms src/logger)
 
 add_executable(testsampling tests/rejection_sampling_test.c)

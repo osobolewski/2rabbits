@@ -67,7 +67,8 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
     }
 
     // Zeta' = -1*Zeta = kappa_prim*Y
-    ok = EC_POINT_mul(group, zeta_prim, NULL, zeta, minus_one, ctx);
+    EC_POINT_copy(zeta_prim, zeta);
+    ok = EC_POINT_invert(group, zeta_prim, ctx);
     if (ok <= 0) {
         TWOR_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Calculating Zeta' = kappa'*Y failed", "2R");
@@ -88,10 +89,10 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
 
     for (int i = 0; i < 2; ++i) {
         size_t len;
-        len = EC_POINT_point2oct(group, points[i], POINT_CONVERSION_UNCOMPRESSED, NULL, 0, ctx);
+        len = encoded_point_len(points[i], group, ctx);
         char encoded_Zeta[len];
 
-        ok = EC_POINT_point2oct(group, points[i], POINT_CONVERSION_UNCOMPRESSED, (unsigned char*)encoded_Zeta, len, ctx);
+        ok = point_2_buffer(encoded_Zeta, len, points[i], group, ctx);
         if (ok <= 0) {
             TWOR_ENCRYPT_CLEANUP;
             logger(LOG_ERR, "Serialization of Zeta failed", "2R");
@@ -130,7 +131,6 @@ BIGNUM* two_rabbits_encrypt(int b, EC_POINT* Y, EC_GROUP* group) {
 int two_rabbits_decrypt(EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     EC_POINT* rho = EC_POINT_new(group);
     EC_POINT* rho_prim = EC_POINT_new(group);
-    BIGNUM* minus_one = BN_new();
     BN_CTX* ctx = BN_CTX_new();
 
     int ok;
@@ -138,20 +138,11 @@ int two_rabbits_decrypt(EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     #define TWOR_DECRYPT_CLEANUP \
         EC_POINT_free(rho);\
         EC_POINT_free(rho_prim);\
-        BN_free(minus_one);\
         BN_CTX_free(ctx);
 
     if (r == NULL || group == NULL || y == NULL) {
         TWOR_DECRYPT_CLEANUP;
         logger(LOG_ERR, "Decryption parameters invalid or unspecified", "2R");
-        return -1;
-    }
-
-    BN_free(minus_one);
-    ok = BN_dec2bn(&minus_one, "-1");
-    if (ok <= 0) {
-        TWOR_DECRYPT_CLEANUP;
-        logger(LOG_ERR, "Creating a BIGNUM -1 failed", "2R");
         return -1;
     }
 
@@ -164,7 +155,8 @@ int two_rabbits_decrypt(EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     }
 
     // calculate rho' = -1*rho
-    ok = EC_POINT_mul(group, rho_prim, NULL, rho, minus_one, ctx);
+    EC_POINT_copy(rho_prim, rho);
+    ok = EC_POINT_invert(group, rho_prim, ctx);
     if (ok <= 0) {
         TWOR_DECRYPT_CLEANUP;
         logger(LOG_ERR, "Calculating rho' = -1*rho failed", "2R");
@@ -178,10 +170,10 @@ int two_rabbits_decrypt(EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
 
     for (int i = 0; i < 2; ++i) {
         size_t len;
-        len = EC_POINT_point2oct(group, points[i], POINT_CONVERSION_UNCOMPRESSED, NULL, 0, ctx);
+        len = encoded_point_len(points[i], group, ctx);
         char encoded_rho[len];
 
-        ok = EC_POINT_point2oct(group, points[i], POINT_CONVERSION_UNCOMPRESSED, (unsigned char*)encoded_rho, len, ctx);
+        ok = point_2_buffer(encoded_rho, len, points[i], group, ctx);
         if (ok <= 0) {
             TWOR_DECRYPT_CLEANUP;
             logger(LOG_ERR, "Serialization of rho failed", "2R");

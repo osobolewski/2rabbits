@@ -1,4 +1,5 @@
 #include <openssl/evp.h>
+#include <openssl/ec.h>
 
 /*
  * Compares n least significant bits of char arrays a and b
@@ -38,4 +39,16 @@ int chr_cmp(const char* c1, const char* c2, int len);
 */
 void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices);
 
-char* recover_n_lsbs(const char* arr, int len, int n);
+int bit_2_byte_len(int bit_len);
+
+char* recover_n_lsbs_str(const char* arr, int len, int n);
+
+size_t recover_n_lsbs_size_t(const char* arr, int len, int n);
+
+int point_2_buffer(char* buffer, size_t len, EC_POINT* point, EC_GROUP* group, BN_CTX* ctx);
+
+size_t encoded_point_len(EC_POINT* point, EC_GROUP* group, BN_CTX* ctx);
+
+char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ctx);
+
+int recover_nth_lsbit(const char* arr, int len, int n);

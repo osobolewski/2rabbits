@@ -101,7 +101,7 @@ void parse_key(EVP_PKEY* pkey) {
     pkey_buffer = (char*)malloc(pkey_len * sizeof(char));
 
     // get raw public key into the buffer
-    EVP_PKEY_get_raw_public_key(pkey, pkey_buffer, &pkey_len);
+    EVP_PKEY_get_raw_public_key(pkey, (unsigned char*)pkey_buffer, &pkey_len);
 
     // gey key params
     OSSL_PARAM* params;
@@ -112,7 +112,7 @@ void parse_key(EVP_PKEY* pkey) {
     BIGNUM* p = (BIGNUM*)OSSL_PARAM_locate(params, "p")->data;
 
     EC_POINT* Y;
-    EC_POINT_oct2point(group, Y, pkey_buffer, pkey_len, NULL);
+    EC_POINT_oct2point(group, Y, (unsigned char*)pkey_buffer, pkey_len, NULL);
 
     free(pkey_buffer);
     OSSL_PARAM_free(params);
@@ -182,7 +182,47 @@ void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices) {
     }
 }
 
-char* recover_n_lsbs(const char* arr, int len, int n) {
+int bit_2_byte_len(int bit_len) {
+    return bit_len/8 + 1 + (bit_len % 8 != 0);
+}
+
+char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ctx) {
+    char* buffer;
+    size_t len = encoded_point_len(point, group, ctx);
+    
+    if (enc_len) {
+        *enc_len = len;
+    }
+
+    buffer = (char*)malloc(len * sizeof(char));
+    
+    int ok = point_2_buffer(buffer, len, point, group, ctx);
+    if (ok <= 0) {
+        return NULL;
+    }     
+
+    return buffer;
+} 
+
+int recover_nth_lsbit(const char* arr, int len, int n) {
+    int starting_index = len - n/8 - ((n % 8 != 0));
+    int res = (arr[starting_index] & (1 << (n - 1))) >> (n-1);
+    return res;
+}
+
+void recover_n_lsbs(char* buffer, const char* arr, int len, int n) {
+    int starting_index = len - n/8 - ((n % 8 != 0));
+    
+    for (int i = starting_index; i < len; ++i) {
+        buffer[i - starting_index] = arr[i];
+    }
+    
+    // recover the last n%8 bits if necessary
+    // if 8|n then the bit mask is 1111 1111 
+    buffer[0] = buffer[0] & ((1 << (n % 8 + 8 * (n % 8 == 0))) - 1);
+}
+
+char* recover_n_lsbs_str(const char* arr, int len, int n) {
     char* buffer;
     
     // If n is not divisible by 8, then we need 
@@ -191,20 +231,51 @@ char* recover_n_lsbs(const char* arr, int len, int n) {
     
     // It can be done with an if...
     // I like this trick more though
-    buffer = (char*)malloc((n/8 + 1 + (n % 8 != 0)) * sizeof(char));
-    int starting_index = len - n/8 - ((n % 8 != 0));
-    
-    for (int i = starting_index; i < len; ++i) {
-        buffer[i - starting_index] = arr[i];
-    }
+    // +1 len for \0
+    int buffer_len = bit_2_byte_len(n) + 1;
+    buffer = (char*)malloc((buffer_len) * sizeof(char));
+    recover_n_lsbs(buffer, arr, len, n);
 
-    // technically it does not have to be a string
-    // but it usually is
-    buffer[len - starting_index] = '\0';
-    
-    // recover the last n%8 bits if necessary
-    // if 8|n then the bit mask is 1111 1111 
-    buffer[0] = buffer[0] & ((1 << (n % 8 + 8 * (n % 8 == 0))) - 1);
+    buffer[buffer_len - 1] = '\0';
 
     return buffer;
+}
+
+size_t recover_n_lsbs_size_t(const char* arr, int len, int n) {
+    unsigned long actual_byte_len = bit_2_byte_len(n);
+    unsigned long size = sizeof(size_t);
+
+    if (actual_byte_len > size) {
+        return (size_t)0;
+    }
+
+    char static_buffer[size];
+
+    // fill buffer with 0s
+    // could use memcpy here too I guess
+    for (size_t i = 0; i < size; i++) {
+        static_buffer[i] = 0;
+    }
+
+    // recover n bits
+    recover_n_lsbs(static_buffer, arr, len, n);
+    
+    size_t result;
+
+    // copy char array as size_t
+    memcpy(&result, static_buffer, size);
+    
+    return result;
+}
+
+size_t encoded_point_len(EC_POINT* point, EC_GROUP* group, BN_CTX* ctx) {
+    return EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, ctx);
+}
+
+int point_2_buffer(char* buffer, size_t len, EC_POINT* point, EC_GROUP* group, BN_CTX* ctx) {
+    int ok;
+
+    ok = EC_POINT_point2oct(group, point, POINT_CONVERSION_UNCOMPRESSED, (unsigned char*)buffer, len, ctx);
+ 
+    return ok;   
 }

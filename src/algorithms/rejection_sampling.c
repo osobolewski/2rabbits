@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
+BIGNUM* rs_encrypt(int m, const char* msg, int msg_len, EC_POINT* Y, EC_GROUP* group) {
     BIGNUM* k = BN_secure_new();
     BIGNUM* order = BN_new();
     BIGNUM* one = BN_new();
@@ -62,10 +62,10 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
 
     do {
         // parse point as bytes
-        size_t len = EC_POINT_point2oct(group, R, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, ctx);
+        size_t len = encoded_point_len(R, group, ctx);
         char encoded_R[len];
-
-        ok = EC_POINT_point2oct(group, R, POINT_CONVERSION_UNCOMPRESSED, (unsigned char*)encoded_R, len, ctx);
+        
+        ok = point_2_buffer(encoded_R, len, R, group, ctx);
         if (ok <= 0) {
             RS_ENCRYPT_CLEANUP;
             logger(LOG_ERR, "Serialization of R failed", "RS");
@@ -83,7 +83,7 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
             return NULL;
         }
 
-        char* hex = chr_2_hex(msg, strlen(msg));
+        char* hex = chr_2_hex(msg, msg_len);
         logger(LOG_DBG, "Message:", "RS");
         logger(LOG_DBG, hex, "RS");
 
@@ -91,7 +91,7 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
         logger(LOG_DBG, "Hash digest:", "RS");
         logger(LOG_DBG, hex, "RS");
 
-        comparison = compare_n_lsb(msg, strlen(msg), digest, digest_len, m);
+        comparison = compare_n_lsb(msg, msg_len, digest, digest_len, m);
         free(digest);
         
         if (comparison) {
@@ -103,27 +103,20 @@ BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group) {
                 return NULL;
             }
 
-            EC_POINT* R_plus_Y = EC_POINT_new(group);
-            
             // R = R + Y
-            ok = EC_POINT_add(group, R_plus_Y, R, Y, ctx);
+            ok = EC_POINT_add(group, R, R, Y, ctx);
             
             if (ok <= 0) {
                 RS_ENCRYPT_CLEANUP;
-                EC_POINT_free(R_plus_Y);
                 logger(LOG_ERR, "Calculating R + Y failed", "RS");
                 return NULL;
             }
-
-            EC_POINT_free(R);
-
-            R = R_plus_Y;
         }
         
     } while (comparison);
 
-    logger(LOG_INFO, "Found k:", "RS");
-    logger(LOG_INFO, BN_print_str(k), "RS");
+    logger(LOG_DBG, "Found k:", "RS");
+    logger(LOG_DBG, BN_print_str(k), "RS");
     
     EC_POINT_free(R);
     BN_CTX_free(ctx);
@@ -158,10 +151,10 @@ char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     }
 
     // parse point as bytes
-    size_t len = EC_POINT_point2oct(group, R, POINT_CONVERSION_UNCOMPRESSED, NULL, 0, ctx);
+    size_t len = encoded_point_len(R, group, ctx);
     char encoded_R[len];
+    ok = point_2_buffer(encoded_R, len, R, group, ctx);
 
-    ok = EC_POINT_point2oct(group, R, POINT_CONVERSION_UNCOMPRESSED, (unsigned char*)encoded_R, len, ctx);
     if (ok <= 0) {
         RS_DECRYPT_CLEANUP;
         logger(LOG_ERR, "Serialization of R failed", "RS");
@@ -177,30 +170,7 @@ char* rs_decrypt(int m, EC_POINT* r, BIGNUM* y, EC_GROUP* group) {
     logger(LOG_DBG, "Hash digest:", "RS");
     logger(LOG_DBG, hex, "RS");
 
-    char* plaintext = recover_n_lsbs(digest, digest_len, m);
-    // int starting_index;
-
-    // if (m % 8 == 0) {
-    //     plaintext = (char*)malloc((m/8 + 1) * sizeof(char));
-    //     starting_index = digest_len - m/8;
-        
-    //     for (int i = starting_index; i < digest_len; ++i) {
-    //         plaintext[i - starting_index] = digest[i];
-    //     }
-    //     // technically it doesnt have to be a string
-    //     // but better safe than sorry.
-    //     plaintext[digest_len - starting_index] = '\0';
-    // } else {
-    //     // we need m%8 lsbits of another byte
-    //     plaintext = (char*)malloc((m/8 + 2) * sizeof(char));
-    //     starting_index = digest_len - m/8 - 1;
-
-    //     for (int i = starting_index; i < digest_len; ++i) {
-    //         plaintext[i - starting_index] = digest[i];
-    //     }
-    //     plaintext[digest_len - starting_index] = '\0';
-    //     plaintext[0] = plaintext[0] & ((1 << m%8) - 1);
-    // }
+    char* plaintext = recover_n_lsbs_str(digest, digest_len, m);
     
     free(digest);
     EC_POINT_free(R);

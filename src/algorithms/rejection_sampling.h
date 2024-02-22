@@ -3,10 +3,10 @@
 #include <openssl/evp.h>
 
 /* 
- * Encrypts m-bits of message msg using rejection sampling with a public key Y
+ * Encrypts m least significant bits of message msg using rejection sampling with a public key Y
  * \return randomness k to be used in higher level protocol 
  */
-BIGNUM* rs_encrypt(int m, const char* msg, EC_POINT* Y, EC_GROUP* group);
+BIGNUM* rs_encrypt(int m, const char* msg, int msg_len, EC_POINT* Y, EC_GROUP* group);
 
 /* 
  * Decrypts m-bits from protocol P output r with a private scalar y 
