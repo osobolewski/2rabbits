@@ -8,8 +8,9 @@
 
 
 BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, const char* delta, int delta_len, const char* dkey, int dkey_len, const EC_POINT* Y, EC_GROUP* group) {
-    BIGNUM* kappa;
     BIGNUM* minus_one = BN_new();
+    BIGNUM* order = BN_new();
+    BIGNUM* kappa;
     BN_CTX* ctx = BN_CTX_new();
     // w = amsg | m-1 
     char* K = NULL;
@@ -18,9 +19,10 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     int ok;
 
     #define AS_ENCRYPT_CLEANUP \
-        BN_CTX_free(ctx);\
         BN_free(minus_one);\
-        if (K) free(K);
+        BN_free(order);\
+        if (K != NULL) free(K);\
+        BN_CTX_free(ctx);
 
     if (Y == NULL || group == NULL || m <= 0 || m > 16 || C <= 0 || delta == NULL || msg == NULL) {
         AS_ENCRYPT_CLEANUP;
@@ -31,14 +33,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     // w = msg | m-1
     size_t w = recover_n_lsbs_size_t(msg, msg_len, m-1);
     // msb of amsg
-    int msb = recover_nth_lsbit(msg, msg_len, m);
-
-    ok = BN_dec2bn(&minus_one, "-1");
-    if (ok <= 0) {
-        AS_ENCRYPT_CLEANUP;
-        logger(LOG_ERR, "Creating a BIGNUM -1 failed", "2R");
-        return NULL;
-    }
+    int msb = recover_nth_lsbit(msg, msg_len, m-1);
 
     // ----2 choices part----
 
@@ -47,9 +42,12 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     const int hash_input_lens[] = {delta_len, dkey_len, 3};
     K = hash(hash_input, 3, hash_input_lens, &K_len);
 
+    logger(LOG_DBG, "K:", "AS");
+    logger(LOG_DBG, chr_2_hex(K, K_len), "AS");
+
     // Set the FPE key
-    FPE_KEY K_ff1;
-    ok = FPE_set_ff1_key((unsigned char*)K, K_len * 8, NULL, 0, (1 << m), &K_ff1);
+    FPE_KEY K_ff3;
+    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, (const unsigned char*)"tweak", (1 << m), &K_ff3);
     if (ok < 0) {
         AS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "FPE set key failed", "AS");
@@ -57,16 +55,22 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     }
 
     // FPE encrypt
-    unsigned int fpe_input;
+    unsigned int fpe_input[1] = {0};
+    unsigned int fpe_output[1];
     unsigned int i0;
     unsigned int i1;
     
+    
     // i0 = ENC(w || 0)
-    fpe_input = (w << 1);
-    FPE_ff1_encrypt(&fpe_input, &i0, 1, &K_ff1, FPE_ENCRYPT);
+    fpe_input[0] = (w << 1);
+    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_ENCRYPT);
+    i0 = fpe_output[0];
     // i0 = ENC(w || 1)
-    fpe_input = (w << 1) | 1;
-    FPE_ff1_encrypt(&fpe_input, &i1, 1, &K_ff1, FPE_ENCRYPT);
+    fpe_input[0] = (w << 1) | 1;
+    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_ENCRYPT);
+    i1 = fpe_output[0];
+
+    FPE_unset_ff1_key(&K_ff3);
 
     int free_slots_i0 = lut_free_slots_row(lut[i0], C);
     int free_slots_i1 = lut_free_slots_row(lut[i1], C);
@@ -75,21 +79,24 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     // or they contain the same number of entries and i0 < i1
     if (free_slots_i0 > free_slots_i1 || (free_slots_i0 == free_slots_i1 && i0 < i1)) {
         kappa = lut_pop(lut, C, i0);
-        sprintf(print_buf, "Inserting kappa_zero into the row %d", (int)i0);
+        sprintf(print_buf, "Popping kappa from the row %d", (int)i0);
         logger(LOG_DBG, print_buf, "AS");
     }
     // if row i1 contains fewer number of entries than i0
     // or they contain the same number of entries and i0 >= i1
     else {
         kappa = lut_pop(lut, C, i1);
-        sprintf(print_buf, "Inserting kappa_one into the row %d", (int)i1);
+        sprintf(print_buf, "Popping kappa from the row %d", (int)i1);
         logger(LOG_DBG, print_buf, "AS");
     }
+
+    logger(LOG_DBG, "kappa:", "AS");
+    logger(LOG_DBG, BN_print_str(kappa), "AS");
 
     // ----2 rabbits part----
     EC_POINT* W = EC_POINT_new(group);
     EC_POINT* W_prim = EC_POINT_new(group);
-    BIGNUM* order = BN_new();
+    
     char* B0 = NULL;
     char* B1 = NULL;
     int digest_len;
@@ -97,23 +104,31 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     #define AS_2R_ENCRYPT_CLEANUP \
         EC_POINT_free(W);\
         EC_POINT_free(W_prim);\
-        BN_free(order);\
-        if (B0) free(B0);\
-        if (B1) free(B1);
-        //BN_CTX_free(ctx);
+        if (B0 != NULL) free(B0);\
+        if (B1 != NULL) free(B1);
     
     int d;
     int b = msb;
 
     if (Y == NULL || group == NULL || m <= 0 || m > 16 || delta == NULL) {
+        AS_2R_ENCRYPT_CLEANUP
         AS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Encryption parameters invalid or unspecified", "AS");
+        return NULL;
+    }
+
+    ok = BN_dec2bn(&minus_one, "-1");
+    if (ok <= 0) {
+        AS_2R_ENCRYPT_CLEANUP
+        AS_ENCRYPT_CLEANUP;
+        logger(LOG_ERR, "Creating a BIGNUM -1 failed", "2R");
         return NULL;
     }
 
     ok = EC_GROUP_get_order(group, order, ctx);
     if (!ok) {
         AS_2R_ENCRYPT_CLEANUP;
+        AS_ENCRYPT_CLEANUP
         logger(LOG_ERR, "Get order failed for provided group", "AS");
         return NULL;
     }
@@ -122,6 +137,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     ok = EC_POINT_mul(group, W, NULL, Y, kappa, ctx);
     if (ok <= 0) {
         AS_2R_ENCRYPT_CLEANUP;
+        AS_ENCRYPT_CLEANUP
         logger(LOG_ERR, "Calculating W = kappa*Y failed", "AS");
         return NULL;
     }    
@@ -131,6 +147,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     ok = EC_POINT_invert(group, W_prim, ctx);
     if (ok <= 0) {
         AS_2R_ENCRYPT_CLEANUP;
+        AS_ENCRYPT_CLEANUP
         logger(LOG_ERR, "Calculating W_prim = -1 * W failed", "AS");
         return NULL;
     }
@@ -152,7 +169,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     B0 = hashes[0], B1 = hashes[1];
 
     // if B0 < B1 then d = 0 and 1 otherwise
-    d = chr_cmp(B0, B1, digest_len) != -1;
+    d = chr_cmp(B0, B1, digest_len) >= 0;
 
     AS_2R_ENCRYPT_CLEANUP;
 
@@ -177,7 +194,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     return kappa;
 }
 
-const char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int dkey_len, EC_POINT*r, BIGNUM* y, EC_GROUP* group) {
+char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int dkey_len, EC_POINT*r, BIGNUM* y, EC_GROUP* group) {
     EC_POINT* W = EC_POINT_new(group);
     EC_POINT* W_prim = EC_POINT_new(group);
     char* K = NULL;
@@ -227,29 +244,6 @@ const char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey
         return NULL;
     }
 
-    // ----2 rabbits part----
-
-    EC_POINT* points[2] = {W, W_prim};
-    char* hashes[2];
-    // calculate hashes
-    for (int i = 0; i < 2; i++) {
-        size_t encoded_len;
-        char* encoded = encode_point(points[i], &encoded_len, group, ctx);
-
-        const char* hash_input[] = {encoded, dkey, "10"};
-        const int hash_input_lens[] = {(int)encoded_len, dkey_len, 3};
-        hashes[i] = hash(hash_input, 3, hash_input_lens, &digest_len);
-
-        free(encoded);
-    }
-    
-    B0 = hashes[0], B1 = hashes[1];
-
-    // if B0 < B1 then d = 0 and 1 otherwise
-    b = chr_cmp(B0, B1, digest_len) != -1;
-
-    // ----2 choices part----
-
     // parse points as bytes
     size_t bytes_lens_W[2];
     char* bytes_W[2] = {
@@ -257,13 +251,32 @@ const char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey
         encode_point(W_prim, &bytes_lens_W[1], group, ctx)
     };
 
+    // ----2 rabbits part----
+
+    char* hashes[2];
+    // calculate hashes
+    for (int i = 0; i < 2; i++) {
+        char* encoded = bytes_W[i];
+
+        const char* hash_input[] = {encoded, dkey, "10"};
+        const int hash_input_lens[] = {bytes_lens_W[i], dkey_len, 3};
+        hashes[i] = hash(hash_input, 3, hash_input_lens, &digest_len);
+    }
+    
+    B0 = hashes[0], B1 = hashes[1];
+
+    // if B0 < B1 then b = 0 and 1 otherwise
+    b = chr_cmp(B0, B1, digest_len) >= 0;
+
+    // ----2 choices part----
+
     // sort arrays
     size_t min_len = MIN(bytes_lens_W[0], bytes_lens_W[1]);
     chr_sort(bytes_W, 2, min_len, NULL);
 
     char* digest;
 
-    // hash the inputs and calculate z_
+    // hash the inputs and calculate z
     const char* hash_input_z[] = {bytes_W[0], bytes_W[1], dkey, "00"};
     const int hash_input_z_lens[] = {(int)bytes_lens_W[0], (int)bytes_lens_W[1], dkey_len, 3};
     digest = hash(hash_input_z, 4, hash_input_z_lens, &digest_len);
@@ -281,31 +294,36 @@ const char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey
     const int hash_input_lens[] = {delta_len, dkey_len, 3};
     K = hash(hash_input, 3, hash_input_lens, &K_len);
 
+    logger(LOG_DBG, "K:", "AS");
+    logger(LOG_DBG, chr_2_hex(K, K_len), "AS");
+
     // Set the FPE key
-    FPE_KEY K_ff1;
-    ok = FPE_set_ff1_key((unsigned char*)K, K_len * 8, NULL, 0, (1 << m), &K_ff1);
+    FPE_KEY K_ff3;
+    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, "tweak", (1 << m), &K_ff3);
     if (ok < 0) {
         AS_DECRYPT_CLEANUP;
         logger(LOG_ERR, "FPE set key failed", "AS");
         return NULL;
     }
 
+    unsigned int fpe_input[1] = {(unsigned int)z};
+    unsigned int fpe_output[1];
+
     // FPE decrypt
-    FPE_ff1_encrypt((unsigned int*)&z, (unsigned int*)&w, 1, &K_ff1, FPE_DECRYPT);
+    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_DECRYPT);
+    w = fpe_output[0];
 
-    // w = w | m-1
-    // w = (w >> 1);
-    // msg = w || b
-    // w = (w << 1) | b;
-    // we can just write
-    w = (w & 1) | b;
+    FPE_unset_ff1_key(&K_ff3);
 
-    sprintf(print_buf,  "Recovered msg: %lud", w);
+    w = (w >> 1) | (b << (m - 1));
+
+    sprintf(print_buf,  "Recovered msg: %lu", w);
     logger(LOG_DBG, print_buf, "AS");
 
-    int size = bit_2_byte_len(m);
+    int size = sizeof(size_t);
     char* plaintext = (char*)malloc(size * sizeof(char));
     memcpy(plaintext, &w, size);
+    swap_endian(plaintext, bit_2_byte_len(m));
     
     AS_DECRYPT_CLEANUP;
 
@@ -326,6 +344,14 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     size_t z_one;
     char print_buf[100];
 
+    #define AS_INSERT_CLEANUP_NO_KAPPA \
+        EC_POINT_free(U);\
+        EC_POINT_free(U_prim);\
+        EC_POINT_free(V);\
+        EC_POINT_free(V_prim);\
+        BN_CTX_free(ctx);\
+        BN_free(order);
+
     #define AS_INSERT_CLEANUP \
         EC_POINT_free(U);\
         EC_POINT_free(U_prim);\
@@ -336,7 +362,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
         BN_free(kappa_zero);\
         BN_free(kappa_one);
 
-    if (Y == NULL || group == NULL || dkey == NULL || lut == NULL || (unsigned long)m > sizeof(size_t)) {
+    if (Y == NULL || group == NULL || dkey == NULL || lut == NULL || (unsigned long)m > sizeof(size_t)*8) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Insert parameters invalid or unspecified", "AS");
         return -1;
@@ -433,6 +459,10 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     digest = hash(hash_input_z_one, 4, hash_input_z_one_lens, &digest_len);
     z_one = recover_n_lsbs_size_t(digest, digest_len, m);
 
+    for (int i = 0; i <2; i++) {
+        free(bytes_U[i]);
+        free(bytes_V[i]);
+    }
     free(digest);
 
     // decide which row to use
@@ -461,6 +491,13 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
         sprintf(print_buf, "Inserting kappa_zero into the row %d", (int)z_zero);
         logger(LOG_DBG, print_buf, "AS");
         inserted_row = z_zero;
+        BN_free(kappa_one);
+        if (ok <= 0) {
+            AS_INSERT_CLEANUP_NO_KAPPA;
+            BN_free(kappa_zero);
+            logger(LOG_ERR, "Failed to insert kappa into lookup table", "AS");
+            return ok;
+        }
     }
     // if row z_one contains fewer number of entries than z_zero
     // or they contain the same number of entries and z_zero >= z_one
@@ -476,20 +513,16 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
         sprintf(print_buf, "Inserting kappa_one into the row %d", (int)z_one);
         logger(LOG_DBG, print_buf, "AS");
         inserted_row = z_one;
-    }
-    if (ok <= 0) {
-        AS_INSERT_CLEANUP;
-        logger(LOG_ERR, "Failed to insert kappa into lookup table", "AS");
-        return ok;
-    }
-
-
-    for (int i = 0; i <2; i++) {
-        free(bytes_U[i]);
-        free(bytes_V[i]);
+        BN_free(kappa_zero);
+        if (ok <= 0) {
+            AS_INSERT_CLEANUP_NO_KAPPA;
+            BN_free(kappa_one);
+            logger(LOG_ERR, "Failed to insert kappa into lookup table", "AS");
+            return ok;
+        }
     }
 
-    AS_INSERT_CLEANUP
+    AS_INSERT_CLEANUP_NO_KAPPA;
 
     return inserted_row;
 }
@@ -547,7 +580,7 @@ BIGNUM*** lut_new(int m, int C) {
     BIGNUM*** lut = (BIGNUM***)malloc(n_rows * sizeof(BIGNUM**));
 
     for(size_t i = 0; i < n_rows; i++) {
-        lut[i] = (BIGNUM**)malloc(n_row_elements * sizeof(int));
+        lut[i] = (BIGNUM**)malloc(n_row_elements * sizeof(BIGNUM*));
         for (size_t j = 0; j < n_row_elements; j++) {
             lut[i][j] = NULL;
         }
@@ -575,7 +608,7 @@ void lut_free(BIGNUM*** lut, int m, int C) {
 BIGNUM* lut_pop(BIGNUM*** lut, int C, size_t row) {
     BIGNUM* res;
 
-    for(size_t j = 0; j < 2*(size_t)C; j++) {
+    for(size_t j = 2*(size_t)C - 1; j >= 0; j--) {
         if (lut[row][j] != NULL) {
             res = lut[row][j];
             lut[row][j] = NULL;

@@ -183,7 +183,7 @@ void chr_sort(char** arr,  int arr_len, int cmp_len, int* indices) {
 }
 
 int bit_2_byte_len(int bit_len) {
-    return bit_len/8 + 1 + (bit_len % 8 != 0);
+    return bit_len/8 + (bit_len % 8 != 0);
 }
 
 char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ctx) {
@@ -205,8 +205,8 @@ char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ct
 } 
 
 int recover_nth_lsbit(const char* arr, int len, int n) {
-    int starting_index = len - n/8 - ((n % 8 != 0));
-    int res = (arr[starting_index] & (1 << (n - 1))) >> (n-1);
+    int starting_index = len - 1 - n/8;
+    int res = (arr[starting_index] >> (n%8)) & 1;
     return res;
 }
 
@@ -241,6 +241,14 @@ char* recover_n_lsbs_str(const char* arr, int len, int n) {
     return buffer;
 }
 
+void swap_endian(char* arr, int len) {
+   for (size_t i = 0; i < len/2; i++) {
+        char tmp = arr[i];
+        arr[i] = arr[len - i - 1];
+        arr[len - i - 1] = tmp;
+    }
+}
+
 size_t recover_n_lsbs_size_t(const char* arr, int len, int n) {
     unsigned long actual_byte_len = bit_2_byte_len(n);
     unsigned long size = sizeof(size_t);
@@ -248,6 +256,7 @@ size_t recover_n_lsbs_size_t(const char* arr, int len, int n) {
     if (actual_byte_len > size) {
         return (size_t)0;
     }
+
 
     char static_buffer[size];
 
@@ -257,10 +266,11 @@ size_t recover_n_lsbs_size_t(const char* arr, int len, int n) {
         static_buffer[i] = 0;
     }
 
-    // recover n bits
+    // recover n bits and swap endianesses
     recover_n_lsbs(static_buffer, arr, len, n);
-    
-    size_t result;
+    swap_endian(static_buffer, actual_byte_len);
+
+    size_t result = 0;
 
     // copy char array as size_t
     memcpy(&result, static_buffer, size);

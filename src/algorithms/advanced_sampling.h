@@ -10,12 +10,17 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
 /*
  * Advanced sampling decryption
  */
-const char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int dkey_len, EC_POINT*r, BIGNUM* y, EC_GROUP* group);
+char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int dkey_len, EC_POINT*r, BIGNUM* y, EC_GROUP* group);
 
 /*
- * Advanced sampling decryption
+ * Advanced sampling insert
  */
 long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* dkey, int dkey_len, EC_POINT* Y, EC_GROUP* group);
+
+/*
+ * Advanced sampling fill lookup table
+ */
+void as_fill(BIGNUM*** lut, int m, int C, const char* dkey, int dkey_len, EC_POINT* Y, EC_GROUP* group);
 
 // ---- Lookup table manipulation functions ----
 

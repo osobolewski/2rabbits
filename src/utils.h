@@ -52,3 +52,5 @@ size_t encoded_point_len(EC_POINT* point, EC_GROUP* group, BN_CTX* ctx);
 char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ctx);
 
 int recover_nth_lsbit(const char* arr, int len, int n);
+
+void swap_endian(char* arr, int len);

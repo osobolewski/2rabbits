@@ -37,3 +37,7 @@ add_executable(test2rabbits tests/2rabbits_test.c)
 target_link_libraries(test2rabbits OpenSSL::Crypto tworabbits)
 target_include_directories(test2rabbits PUBLIC src/algorithms src/logger)
 
+add_executable(testadvanced tests/advanced_sampling_test.c)
+target_link_libraries(testadvanced OpenSSL::Crypto tworabbits)
+target_include_directories(testadvanced PUBLIC src/algorithms src/logger)
+
