@@ -56,3 +56,5 @@ bin/
 .vscode/
 
 callgrind*
+
+tests/keys/

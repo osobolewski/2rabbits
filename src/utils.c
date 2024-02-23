@@ -3,6 +3,9 @@
 #include <string.h>
 #include <openssl/evp.h>
 #include <openssl/ec.h>
+#include <openssl/pem.h>
+#include <openssl/core_names.h>
+#include <openssl/obj_mac.h>
 
 
 char* chr_2_hex(const char* bytes, size_t len) {
@@ -92,32 +95,130 @@ char* hash(const char** inputs, int inputs_arr_len, const int* inputs_lens, int*
     return digest;
 }
 
-void parse_key(EVP_PKEY* pkey) {
-    size_t pkey_len = 0;
-    char* pkey_buffer;
+int parse_pem_key(const char* path, EVP_PKEY** pkey, int priv) {
+    FILE* fp = NULL; 
+    fp = fopen(path, "r");
     
+    if (!fp) {
+        logger(LOG_ERR, "Failed to open the PEM key file", "PK");
+        return -1;
+    }
+
+    if (priv) {
+        PEM_read_PrivateKey(fp, pkey, NULL, NULL);
+    } 
+    else {
+        PEM_read_PUBKEY(fp, pkey, NULL, NULL);
+    }
+
+    fclose(fp);
+
+    if (!pkey) {
+        logger(LOG_ERR, "Failed read and parse PEM file", "PK");
+        return -1;
+    }
+
+    return 1;
+}
+
+// I'm truly astonished by the fact that 
+// there is a name2nid function in openssl
+// but there is no nid2name
+int name2nid(const char* name) {
+    for(int i = 0; i < 1000; i++) {
+        const char* cname = OSSL_EC_curve_nid2name(i);
+        if (cname && strcmp(cname, name) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int parse_evp_pkey(const EVP_PKEY* pkey, EC_GROUP** group, EC_POINT** public_key, BIGNUM** private_key) {
+    size_t len = 0;
+    size_t p_len = 0;
+    int ok;
+    char* buffer = NULL;
+    char print_buf[200];
+    BN_CTX* ctx = BN_CTX_new();
+
     // get length of public key (it will be written to pkey_len)
-    EVP_PKEY_get_raw_public_key(pkey, NULL, &pkey_len);
-    pkey_buffer = (char*)malloc(pkey_len * sizeof(char));
-
+    ok = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, NULL, 100, &len);
+    if (ok <= 0) {
+        BN_CTX_free(ctx);
+        logger(LOG_ERR, "Failed to get public key length", "PK");
+        return -1;
+    }
+    buffer = (char*)malloc(len * sizeof(char));
+   
+    #define PK_CLEANUP\
+        BN_CTX_free(ctx);\
+        free(buffer);
+    
     // get raw public key into the buffer
-    EVP_PKEY_get_raw_public_key(pkey, (unsigned char*)pkey_buffer, &pkey_len);
+    ok = EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, (unsigned char*)buffer, 1000, &p_len);
+    if (ok <= 0) {
+        PK_CLEANUP;
+        logger(LOG_ERR, "Failed to get raw public key", "PK");
+        return -1;
+    }
+    
+    char group_name[50];
+    ok = EVP_PKEY_get_utf8_string_param(pkey, OSSL_PKEY_PARAM_GROUP_NAME, group_name, 50, NULL);
+    if (ok <= 0) {
+        PK_CLEANUP;
+        logger(LOG_ERR, "Failed to get group name", "PK");
+        return -1;
+    }
 
-    // gey key params
-    OSSL_PARAM* params;
-    EVP_PKEY_todata(pkey, EVP_PKEY_KEYPAIR, &params);
+    int group_nid = name2nid(group_name);
 
-    int* group_name = (int*)OSSL_PARAM_locate(params, "group")->data;
-    EC_GROUP* group = EC_GROUP_new_by_curve_name(*group_name);
-    BIGNUM* p = (BIGNUM*)OSSL_PARAM_locate(params, "p")->data;
+    sprintf(print_buf, "Curve name: %s, NID: %d", group_name, group_nid);
+    logger(LOG_DBG, print_buf, "PK");
+    
+    *group = EC_GROUP_new_by_curve_name(group_nid);
+    if (!*group) {
+        PK_CLEANUP;
+        logger(LOG_ERR, "Failed to get cerate a group from the group name", "PK");
+        return -1;
+    }
 
-    EC_POINT* Y;
-    EC_POINT_oct2point(group, Y, (unsigned char*)pkey_buffer, pkey_len, NULL);
+    // parse public key as point
+    //EC_POINT_2
+    //ok = EC_POINT_hex2point(*group, buffer, *public_key, ctx);
+    *public_key = EC_POINT_new(*group);
+    ok = EC_POINT_oct2point(*group, *public_key, (unsigned char*)buffer, p_len, ctx);
+    if (ok <= 0) {
+        PK_CLEANUP;
+        logger(LOG_ERR, "Failed to parse public key as point", "PK");
+        return -1;
+    }
 
-    free(pkey_buffer);
-    OSSL_PARAM_free(params);
-    EC_GROUP_free(group);
-    EC_POINT_free(Y);
+    sprintf(print_buf, "Public key: %s", chr_2_hex(buffer, len));
+    logger(LOG_DBG, print_buf, "PK");
+
+    // parse private key as bignum
+    if (private_key) {
+        if (!EVP_PKEY_can_sign(pkey)) {
+            PK_CLEANUP;
+            logger(LOG_ERR, "The key does not contain private key!", "PK");
+            return -1;
+        }
+
+        ok = EVP_PKEY_get_bn_param(pkey, OSSL_PKEY_PARAM_PRIV_KEY, private_key);
+        if (ok <= 0) {
+            PK_CLEANUP;
+            logger(LOG_ERR, "Failed to get private key", "PK");
+            return -1;
+        }
+
+        sprintf(print_buf, "Private key: %s", BN_print_str(*private_key));
+        logger(LOG_DBG, print_buf, "PK");
+    }
+
+    PK_CLEANUP;
+
+    return 1;
 }
 
 char* BN_print_str(BIGNUM* a) {

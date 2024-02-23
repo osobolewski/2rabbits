@@ -54,3 +54,7 @@ char* encode_point(EC_POINT* point, size_t* enc_len, EC_GROUP* group, BN_CTX* ct
 int recover_nth_lsbit(const char* arr, int len, int n);
 
 void swap_endian(char* arr, int len);
+
+int parse_evp_pkey(const EVP_PKEY* pkey, EC_GROUP** group, EC_POINT** public_key, BIGNUM** private_key);
+
+int parse_pem_key(const char* path, EVP_PKEY** pkey, int priv);

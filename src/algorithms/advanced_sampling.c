@@ -259,7 +259,7 @@ char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int 
         char* encoded = bytes_W[i];
 
         const char* hash_input[] = {encoded, dkey, "10"};
-        const int hash_input_lens[] = {bytes_lens_W[i], dkey_len, 3};
+        const int hash_input_lens[] = {(int)bytes_lens_W[i], dkey_len, 3};
         hashes[i] = hash(hash_input, 3, hash_input_lens, &digest_len);
     }
     

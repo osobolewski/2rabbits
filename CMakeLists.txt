@@ -25,7 +25,9 @@ add_library(tworabbits
                 src/logger/logger.h 
                 src/logger/logger.c 
                 src/utils.h 
-                src/utils.c)
+                src/utils.c
+                src/anamorphic_ecdsa/ecdsa.h
+                src/anamorphic_ecdsa/ecdsa.c)
 target_link_libraries(tworabbits OpenSSL::Crypto libfpe)
 target_include_directories(tworabbits PUBLIC src/algorithms src/logger)
 
@@ -40,4 +42,8 @@ target_include_directories(test2rabbits PUBLIC src/algorithms src/logger)
 add_executable(testadvanced tests/advanced_sampling_test.c)
 target_link_libraries(testadvanced OpenSSL::Crypto tworabbits)
 target_include_directories(testadvanced PUBLIC src/algorithms src/logger)
+
+add_executable(testecdsa tests/ecdsa_test.c)
+target_link_libraries(testecdsa OpenSSL::Crypto tworabbits)
+target_include_directories(testecdsa PUBLIC src/algorithms src/logger)
 
