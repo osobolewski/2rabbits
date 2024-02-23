@@ -29,7 +29,7 @@ char* ecdsa_sign(EVP_PKEY* sign_priv_key, const char* sign_message) {
     int buf_len = ECDSA_size(ec_key);
     char* sig = (char*)malloc(buf_len * sizeof(char));
     
-    ECDSA_sign(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int)buf_len, ec_key);
+    ECDSA_sign(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int*)&buf_len, ec_key);
 
     free(digest);
     EC_KEY_free(ec_key);;
@@ -78,12 +78,12 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg,
     int buf_len = ECDSA_size(ec_key);
     char* sig = (char*)malloc(buf_len * sizeof(char));
 
-    ECDSA_sign_ex(0, digest, digest_len, sig, buf_len, k, NULL, ec_key);
+    ECDSA_sign_ex(0, digest, digest_len, sig, &buf_len, k, NULL, ec_key);
 
     free(digest);
-    BIGNUM_free(order);
-    BIGNUM_free(k);
-    BIGNUM_free(x);
+    BN_free(order);
+    BN_free(k);
+    BN_free(x);
     EC_POINT_free(X);
     EC_POINT_free(Y);
 
@@ -96,8 +96,6 @@ char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg,
     return "";
 }
 
-
-
 int ecdsa_verify_openssl(EVP_PKEY* sign_pub_key, const char* sign_message, 
                  const char* signature, int signature_len) {
     const char* inputs[] = {sign_message};
@@ -107,7 +105,7 @@ int ecdsa_verify_openssl(EVP_PKEY* sign_pub_key, const char* sign_message,
     char* digest = hash(inputs, 1, lens, &digest_len);
 
     EC_KEY* ec_key = EVP_PKEY_get1_EC_KEY(sign_pub_key); 
-
+    
     int verify = ECDSA_verify(0, digest, digest_len, signature, signature_len, ec_key);
     free(digest);
 
@@ -126,7 +124,7 @@ int ecdsa_verify_explicit(EVP_PKEY* sign_pub_key, const char* sign_message,
 
     EC_KEY* eckey = EVP_PKEY_get1_EC_KEY(sign_pub_key); 
     ECDSA_SIG* sig; 
-    d2i_ECDSA_SIG(&sig, signature, signature_len); 
+    d2i_ECDSA_SIG(&sig, (const unsigned char**)&signature, signature_len); 
 
     int ret = -1, i;
     BN_CTX *ctx;
@@ -146,10 +144,7 @@ int ecdsa_verify_explicit(EVP_PKEY* sign_pub_key, const char* sign_message,
         return -1;
     }
 
-    ctx = BN_CTX_new_ex((*eckey)->libctx);
-    if (ctx == NULL) {
-        return -1;
-    }
+    ctx = BN_CTX_new();
     BN_CTX_start(ctx);
     u1 = BN_CTX_get(ctx);
     u2 = BN_CTX_get(ctx);
@@ -164,8 +159,8 @@ int ecdsa_verify_explicit(EVP_PKEY* sign_pub_key, const char* sign_message,
         goto err;
     }
 
-    BIGNUM* r = ECDSA_SIG_get0_r(sig);
-    BIGNUM* s = ECDSA_SIG_get0_s(sig);
+    const BIGNUM* r = ECDSA_SIG_get0_r(sig);
+    const BIGNUM* s = ECDSA_SIG_get0_s(sig);
 
     if (BN_is_zero(r) || BN_is_negative(r) ||
         BN_ucmp(r, order) >= 0 || BN_is_zero(s) ||
@@ -174,7 +169,7 @@ int ecdsa_verify_explicit(EVP_PKEY* sign_pub_key, const char* sign_message,
         goto err;
     }
     /* calculate tmp1 = inv(S) mod order */
-    if (!ossl_ec_group_do_inverse_ord(group, u2, s, ctx)) {
+    if (!BN_mod_inverse(u2, s, order, ctx)) {
         goto err;
     }
     /* digest -> m */
