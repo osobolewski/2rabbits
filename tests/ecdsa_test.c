@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     logger(LOG_INFO, "Parsing the signing public key...", "TEST");
 
     EVP_PKEY* pubkey = NULL;
-    parse_pem_key("./keys/ec-secp256k1-pub-key.pem", &pubkey, 0);
+    parse_pem_key("../keys/ec-secp256k1-pub-key.pem", &pubkey, 0);
 
     EC_GROUP* group_1 = NULL;
     EC_POINT* Y = NULL;
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
     logger(LOG_INFO, "Reading the signing private key...", "TEST");
 
     EVP_PKEY* privkey = NULL;
-    parse_pem_key("./keys/ec-secp256k1-priv-key.pem", &privkey, 1);
+    parse_pem_key("../keys/ec-secp256k1-priv-key.pem", &privkey, 1);
 
     logger(LOG_INFO, "Parsing the private key...", "TEST");
 
@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     logger(LOG_INFO, "Reading the encryption private key...", "TEST");
 
     EVP_PKEY* privkey_enc = NULL;
-    parse_pem_key("./keys/ec-secp256k1-priv-key_enc.pem", &privkey_enc, 1);
+    parse_pem_key("../keys/ec-secp256k1-priv-key_enc.pem", &privkey_enc, 1);
 
     logger(LOG_INFO, "Parsing the private key...", "TEST");
 
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     logger(LOG_INFO, "Reading the encryption public key...", "TEST");
 
     EVP_PKEY* pubkey_enc = NULL;
-    parse_pem_key("./keys/ec-secp256k1-pub-key_enc.pem", &pubkey_enc, 0);
+    parse_pem_key("../keys/ec-secp256k1-pub-key_enc.pem", &pubkey_enc, 0);
 
 
     // sanity tests
