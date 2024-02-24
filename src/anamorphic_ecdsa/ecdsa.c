@@ -78,9 +78,9 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     // anyway. Let people use low-level functions! They sometimes
     // know what they are doing!
     int ok = -1;
-    char* digest;
-    char* sig;
-    const EC_KEY* ec_key;
+    char* digest = NULL;
+    char* sig = NULL;
+    const EC_KEY* ec_key = NULL;
     const char* inputs[] = {sign_msg};
     const int lens[] = {(int)strlen(sign_msg)};
     int digest_len;
@@ -152,11 +152,11 @@ err:
 
 char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
                     EVP_PKEY* enc_pub_key, const char* enc_msg, int enc_msg_len,
-                    const char* dkey, int dkey_len, int m) {
+                    int m) {
     int ok = -1;
-    char* digest;
-    char* sig;
-    const EC_KEY* ec_key;
+    char* digest = NULL;
+    char* sig = NULL;
+    const EC_KEY* ec_key = NULL;
     const char* inputs[] = {sign_msg};
     const int lens[] = {(int)strlen(sign_msg)};
     int digest_len;

@@ -4,6 +4,7 @@ project(2rabbits VERSION 1.0
         DESCRIPTION "Proof of Concept"
         LANGUAGES C)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(OPENSSL_USE_STATIC_LIBS TRUE)
 set(OPENSSL_ROOT_DIR /usr/include/openssl/)
 set(OPENSSL_CRYPTO_LIBRARY /usr/lib/libcrypto.so)
