@@ -19,7 +19,6 @@ char* ecdsa_sign(EVP_PKEY* sign_priv_key, const char* sign_message, int* sig_len
     char* digest = hash(inputs, 1, lens, &digest_len);
 
     const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(sign_priv_key); 
-
     int buf_len = ECDSA_size(ec_key);
 
     char* sig = (char*)malloc(buf_len * sizeof(char));
@@ -28,6 +27,7 @@ char* ecdsa_sign(EVP_PKEY* sign_priv_key, const char* sign_message, int* sig_len
     *sig_len = buf_len;
 
     free(digest);
+    //EC_KEY_free(ec_key);
 
     if (ok <= 0) {
         return NULL;
@@ -77,6 +77,14 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     // deprecated as the high level APIs use those functions 
     // anyway. Let people use low-level functions! They sometimes
     // know what they are doing!
+    int ok = -1;
+    char* digest;
+    char* sig;
+    const EC_KEY* ec_key;
+    const char* inputs[] = {sign_msg};
+    const int lens[] = {(int)strlen(sign_msg)};
+    int digest_len;
+    int buf_len;
 
     logger(LOG_DBG, "Parsing the private key...", "ECDSA");
 
@@ -89,45 +97,42 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     EC_POINT* Y = NULL;
     parse_evp_pkey(enc_pub_key, &group2, &Y, NULL);
 
-    if (EC_GROUP_get_curve_name(group) != EC_GROUP_get_curve_name(group2)) {
-        logger(LOG_ERR, "Provided keys operate on different curves!", "ECDSA");
-        return NULL;
-    }
-
-    //time_t now;
-    //time(&now);
     EC_POINT* r = EC_POINT_new(group);
-
     BIGNUM* rp = BN_new();
 
-    BIGNUM* k = as_encrypt(lut, m, C, enc_msg, enc_msg_len, sign_msg, strlen(sign_msg), dkey, dkey_len, Y, group2);
-    
+    BIGNUM* k = as_encrypt(lut, m, C, enc_msg, enc_msg_len, sign_msg, strlen(sign_msg), dkey, dkey_len, Y, group);
     BIGNUM* order = BN_new();
-    EC_GROUP_get_order(group, order, NULL);
+
+    if (!k) goto err;
+    if (EC_GROUP_get_order(group, order, NULL) <= 0) goto err;
+
+    if (EC_GROUP_get_curve_name(group) != EC_GROUP_get_curve_name(group2)) {
+        logger(LOG_ERR, "Provided keys operate on different curves!", "ECDSA");
+        goto err;
+    }
 
     // precompute r
-    EC_POINT_mul(group, r, k, NULL, NULL, NULL);
-    EC_POINT_get_affine_coordinates(group, r, rp, NULL, NULL);
+    if (EC_POINT_mul(group, r, k, NULL, NULL, NULL) <= 0) goto err;
+
+    if (EC_POINT_get_affine_coordinates(group, r, rp, NULL, NULL) <= 0) goto err;
 
     // precompute k_inv to use in the signature algo
-    BN_mod_inverse(k, k, order, NULL);
-
-    const char* inputs[] = {sign_msg};
-    const int lens[] = {(int)strlen(sign_msg)};
-    int digest_len;
+    if (!BN_mod_inverse(k, k, order, NULL)) goto err;
     
-    char* digest = hash(inputs, 1, lens, &digest_len);
+    digest = hash(inputs, 1, lens, &digest_len);
 
-    EC_KEY* ec_key = EVP_PKEY_get1_EC_KEY(sign_priv_key); 
+    ec_key = EVP_PKEY_get0_EC_KEY(sign_priv_key); 
+    if (!ec_key) goto err;
 
-    int buf_len = ECDSA_size(ec_key);
-    char* sig = (char*)malloc(buf_len * sizeof(char));
+    buf_len = ECDSA_size(ec_key);
+    sig = (char*)malloc(buf_len * sizeof(char));
 
-    int ok = ECDSA_sign_ex(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int*)&buf_len, k, rp, ec_key);
+    ok = ECDSA_sign_ex(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int*)&buf_len, k, rp, (EC_KEY*)ec_key);
 
     *sig_len = buf_len;
 
-    free(digest);
+err:
+    if (digest) free(digest);
     BN_free(order);
     BN_free(k);
     BN_free(x);
@@ -135,6 +140,8 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     EC_POINT_free(X);
     EC_POINT_free(Y);
     EC_POINT_free(r);
+    EC_GROUP_free(group2);
+    EC_GROUP_free(group);
 
     if (ok <= 0) {
         return NULL;
@@ -146,7 +153,15 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
 char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
                     EVP_PKEY* enc_pub_key, const char* enc_msg, int enc_msg_len,
                     const char* dkey, int dkey_len, int m) {
-    
+    int ok = -1;
+    char* digest;
+    char* sig;
+    const EC_KEY* ec_key;
+    const char* inputs[] = {sign_msg};
+    const int lens[] = {(int)strlen(sign_msg)};
+    int digest_len;
+    int buf_len;
+
     logger(LOG_DBG, "Parsing the private key...", "ECDSA");
 
     EC_GROUP* group = NULL;
@@ -158,43 +173,42 @@ char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     EC_POINT* Y = NULL;
     parse_evp_pkey(enc_pub_key, &group2, &Y, NULL);
 
-    if (EC_GROUP_get_curve_name(group) != EC_GROUP_get_curve_name(group2)) {
-        logger(LOG_ERR, "Provided keys operate on different curves!", "ECDSA");
-        return NULL;
-    }
-
     EC_POINT* r = EC_POINT_new(group);
     BIGNUM* rp = BN_new();
 
     BIGNUM* k = rs_encrypt(m, enc_msg, enc_msg_len, Y, group2);
     
     BIGNUM* order = BN_new();
-    EC_GROUP_get_order(group, order, NULL);
+
+    if (!k) goto err;
+    if (EC_GROUP_get_order(group, order, NULL) <= 0) goto err;
+
+    if (EC_GROUP_get_curve_name(group) != EC_GROUP_get_curve_name(group2)) {
+        logger(LOG_ERR, "Provided keys operate on different curves!", "ECDSA");
+        goto err;
+    }
 
     // precompute r
-    EC_POINT_mul(group, r, k, NULL, NULL, NULL);
+    if (EC_POINT_mul(group, r, k, NULL, NULL, NULL) <= 0) goto err;
 
-    EC_POINT_get_affine_coordinates(group, r, rp, NULL, NULL);
+    if (EC_POINT_get_affine_coordinates(group, r, rp, NULL, NULL) <= 0) goto err;
 
     // precompute k_inv to use in the signature algo
-    BN_mod_inverse(k, k, order, NULL);
-
-    const char* inputs[] = {sign_msg};
-    const int lens[] = {(int)strlen(sign_msg)};
-    int digest_len;
+    if (!BN_mod_inverse(k, k, order, NULL)) goto err;
     
-    char* digest = hash(inputs, 1, lens, &digest_len);
+    digest = hash(inputs, 1, lens, &digest_len);
 
-    EC_KEY* ec_key = EVP_PKEY_get1_EC_KEY(sign_priv_key); 
+    ec_key = EVP_PKEY_get0_EC_KEY(sign_priv_key); 
+    if (!ec_key) goto err;
 
-    int buf_len = ECDSA_size(ec_key);
-    char* sig = (char*)malloc(buf_len * sizeof(char));
+    buf_len = ECDSA_size(ec_key);
+    sig = (char*)malloc(buf_len * sizeof(char));
 
-    int ok = ECDSA_sign_ex(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int*)&buf_len, k, rp, ec_key);
-
+    ok = ECDSA_sign_ex(0, (unsigned char*)digest, digest_len, (unsigned char*)sig, (unsigned int*)&buf_len, k, rp, (EC_KEY*)ec_key);
     *sig_len = buf_len;
 
-    free(digest);
+err:
+    if (digest) free(digest);
     BN_free(order);
     BN_free(k);
     BN_free(x);
@@ -202,6 +216,8 @@ char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     EC_POINT_free(X);
     EC_POINT_free(Y);
     EC_POINT_free(r);
+    EC_GROUP_free(group2);
+    EC_GROUP_free(group);
 
     if (ok <= 0) {
         return NULL;
@@ -218,10 +234,12 @@ int ecdsa_verify_openssl(EVP_PKEY* sign_pub_key, const char* sign_message,
     
     char* digest = hash(inputs, 1, lens, &digest_len);
 
-    const EC_KEY* ec_key = EVP_PKEY_get0_EC_KEY(sign_pub_key); 
+    EC_KEY* ec_key = EVP_PKEY_get1_EC_KEY(sign_pub_key); 
     
     int verify = ECDSA_verify(0, (unsigned char*)digest, (unsigned int)digest_len, (unsigned char*)signature, signature_len, ec_key);
+    
     free(digest);
+    EC_KEY_free(ec_key);
 
     return verify;
 }
@@ -262,7 +280,7 @@ int ecdsa_verify_full(EVP_PKEY* sign_pub_key, const char* sign_message,
     
     char* dgst = hash(inputs, 1, lens, &dgst_len);
 
-    EC_KEY* eckey = EVP_PKEY_get1_EC_KEY(sign_pub_key); 
+    const EC_KEY* eckey = EVP_PKEY_get0_EC_KEY(sign_pub_key); 
     ECDSA_SIG* sig = ECDSA_SIG_new(); 
     d2i_ECDSA_SIG(&sig, (const unsigned char**)&signature, signature_len); 
 
@@ -354,7 +372,7 @@ int ecdsa_verify_full(EVP_PKEY* sign_pub_key, const char* sign_message,
     ret = (BN_ucmp(u1, r) == 0);
     
 err:
-
+    free(dgst);
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     EC_POINT_free(point);

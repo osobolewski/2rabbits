@@ -149,9 +149,9 @@ int main(int argc, char* argv[]) {
     EVP_PKEY_free(privkey_enc);
     EVP_PKEY_free(pubkey_enc);
 
-
     EVP_PKEY_free(privkey);
     EC_GROUP_free(group_2);
+    EC_GROUP_free(group_3);
     EC_POINT_free(Y2);
     BN_free(y);
 }
