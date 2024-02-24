@@ -125,7 +125,7 @@ int parse_pem_key(const char* path, EVP_PKEY** pkey, int priv) {
 // there is a name2nid function in openssl
 // but there is no nid2name
 int name2nid(const char* name) {
-    for(int i = 0; i < 1000; i++) {
+    for(int i = 0; i < 2000; i++) {
         const char* cname = OSSL_EC_curve_nid2name(i);
         if (cname && strcmp(cname, name) == 0) {
             return i;

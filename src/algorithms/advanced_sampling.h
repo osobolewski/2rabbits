@@ -5,7 +5,9 @@
 /*
  * Advanced sampling encryption
  */
-BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, const char* delta, int delta_len, const char* dkey, int dkey_len, const EC_POINT* Y, EC_GROUP* group);
+BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, 
+                    const char* delta, int delta_len, const char* dkey, int dkey_len, 
+                    const EC_POINT* Y, EC_GROUP* group);
 
 /*
  * Advanced sampling decryption
