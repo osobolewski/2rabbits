@@ -6,10 +6,20 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <openssl/rand.h>
 
+char* get_random_bits(int n) {
+    int bytes = bit_2_byte_len(n);
+    char* buf = (char*)malloc(bytes*sizeof(char));
+    RAND_bytes((unsigned char*)buf, bytes);
+
+    return buf;
+}
 
 int main(int argc, char* argv[]) {  
+    set_verbose(LOG_INFO);
     logger(LOG_INFO, "Generating keys...", "BNCH");
+    char print_buf[200];
     EVP_PKEY* signing_key = EVP_PKEY_new();
     EC_POINT* X = NULL;
     BIGNUM* x = NULL;
@@ -40,8 +50,9 @@ int main(int argc, char* argv[]) {
 
     logger(LOG_INFO, "Keys generated", "BNCH");
 
-    int m = 12;
+    int m = 8;
     int C = 5;
+    int repetitions = 1000;
 
     const char dkey[] = "dual key";
 
@@ -49,38 +60,54 @@ int main(int argc, char* argv[]) {
 
     clock_t now = clock();
     as_fill(lut, m, C, dkey, strlen(dkey), Y, group_2);
-    printf("as_fill time: %.3f ms\n", (double)(clock() - now) / CLOCKS_PER_SEC);
+    sprintf(print_buf, "as_fill time: %.3f s", (double)(clock() - now) / CLOCKS_PER_SEC);
+    logger(LOG_INFO, print_buf, "BNCH");
 
     now = clock();
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < repetitions; i++) {
         char str[12];
+        char* enc;
         sprintf(str, "Message: %d", i);
+
+        enc = get_random_bits(m);
+
         int sig_len;
-        as_insert(lut, m, C, 0, dkey, strlen(dkey), X, group_1);
-        char* sig = ecdsa_as_sign(signing_key, str, &sig_len, encryption_key, "AA", 2, dkey, strlen(dkey), m, C, lut);
+        // insert
+        as_insert(lut, m, C, 0, dkey, strlen(dkey), Y, group_2);
+        // then sign
+        char* sig = ecdsa_as_sign(signing_key, str, &sig_len, encryption_key, enc, strlen(enc), dkey, strlen(dkey), m, C, lut);
         free(sig);
+        free(enc);
     }
-    printf("1000 as_sign time: %.3f ms\n", (double)(clock() - now) / CLOCKS_PER_SEC);
+    sprintf(print_buf, "%d as_sign time: %.3f s", repetitions, (double)(clock() - now) / CLOCKS_PER_SEC);
+    logger(LOG_INFO, print_buf, "BNCH");
 
     now = clock();
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < repetitions; i++) {
         char str[12];
+        char* enc;
+
+        enc = get_random_bits(m);
+
         sprintf(str, "Message: %d", i);
         int sig_len;
         char* sig = ecdsa_rs_sign(signing_key, str, &sig_len, encryption_key, "AA", 2, m);
         free(sig);
+        free(enc);
     }
-    printf("1000 rs_sign time: %.3f ms\n", (double)(clock() - now) / CLOCKS_PER_SEC);
+    sprintf(print_buf, "%d rs_sign time: %.3f s", repetitions, (double)(clock() - now) / CLOCKS_PER_SEC);
+    logger(LOG_INFO, print_buf, "BNCH");
 
     now = clock();
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < repetitions; i++) {
         char str[12];
         sprintf(str, "Message: %d", i);
         int sig_len;
         char* sig = ecdsa_sign(signing_key, str, &sig_len);
         free(sig);
     }
-    printf("1000 ecdsa_sign time: %.3f ms\n", (double)(clock() - now) / CLOCKS_PER_SEC);
+    sprintf(print_buf, "%d pure ecdsa_sign time: %.3f s", repetitions, (double)(clock() - now) / CLOCKS_PER_SEC);
+    logger(LOG_INFO, print_buf, "BNCH");
 
     lut_free(lut, m, C);
     EVP_PKEY_free(signing_key);

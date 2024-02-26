@@ -58,3 +58,5 @@ bin/
 callgrind*
 
 keys/
+
+vgcore*

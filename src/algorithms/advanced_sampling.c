@@ -75,19 +75,25 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     int free_slots_i0 = lut_free_slots_row(lut[i0], C);
     int free_slots_i1 = lut_free_slots_row(lut[i1], C);
 
-    // if row i0 contains fewer number of entries than i1
+    // if row i0 contains more entries than i1
     // or they contain the same number of entries and i0 < i1
-    if (free_slots_i0 > free_slots_i1 || (free_slots_i0 == free_slots_i1 && i0 < i1)) {
+    if (free_slots_i0 < free_slots_i1 || (free_slots_i0 == free_slots_i1 && i0 < i1)) {
         kappa = lut_pop(lut, C, i0);
-        sprintf(print_buf, "Popping kappa from the row %d", (int)i0);
+        sprintf(print_buf, "Popping kappa from the row %d, free: %d (row %d: %d)", (int)i0, free_slots_i0, (int)i1, free_slots_i1);
         logger(LOG_DBG, print_buf, "AS");
     }
-    // if row i1 contains fewer number of entries than i0
+    // if row i1 contains more entries than i0
     // or they contain the same number of entries and i0 >= i1
     else {
         kappa = lut_pop(lut, C, i1);
-        sprintf(print_buf, "Popping kappa from the row %d", (int)i1);
+        sprintf(print_buf, "Popping kappa from the row %d, free: %d (row %d: %d)", (int)i1, free_slots_i1, (int)i0, free_slots_i0);
         logger(LOG_DBG, print_buf, "AS");
+    }
+
+    if (!kappa) {
+        AS_ENCRYPT_CLEANUP;
+        logger(LOG_ERR, "Could not pop kappa from the lookup table", "AS");
+        return NULL;
     }
 
     logger(LOG_DBG, "kappa:", "AS");
@@ -372,7 +378,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (!ok) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Get order failed for provided group", "AS");
-        return ok;
+        return -1;
     }
 
     // kappa_zero <-R {0, order}
@@ -380,7 +386,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Get random kappa failed", "AS");
-        return ok;
+        return -1;
     }
 
     // kappa_one := 2*kappa_zero mod q
@@ -389,7 +395,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Calculating kappa_one failed", "AS");
-        return ok;
+        return -1;
     }
 
     // U = kappa_zero * Y
@@ -397,7 +403,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Calculating U = kappa_zero*Y failed", "AS");
-        return ok;
+        return -1;
     }
     // U_prim = -1 * U
     EC_POINT_copy(U_prim, U);
@@ -405,7 +411,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Calculating U_prim = -1 * U failed", "AS");
-        return ok;
+        return -1;
     }
 
     // V = 2 * U
@@ -413,7 +419,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Calculating V = 2*U failed", "AS");
-        return ok;
+        return -1;
     }
     // V_prim = -1 * V
     EC_POINT_copy(V_prim, V);
@@ -421,7 +427,7 @@ long long as_insert(BIGNUM*** lut, int m, int C, int C_hard_bound, const char* d
     if (ok <= 0) {
         AS_INSERT_CLEANUP;
         logger(LOG_ERR, "Calculating V_prim = -1 * V failed", "AS");
-        return ok;
+        return -1;
     }
 
     // parse points as bytes
@@ -608,7 +614,7 @@ void lut_free(BIGNUM*** lut, int m, int C) {
 BIGNUM* lut_pop(BIGNUM*** lut, int C, size_t row) {
     BIGNUM* res;
 
-    for(size_t j = 2*(size_t)C - 1; j >= 0; j--) {
+    for(long long j = 2*(size_t)C - 1; j >= 0; j--) {
         if (lut[row][j] != NULL) {
             res = lut[row][j];
             lut[row][j] = NULL;
