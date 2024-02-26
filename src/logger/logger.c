@@ -12,14 +12,13 @@ void set_verbose(int level) {
 }
 
 void logger(int level, const char* message, const char* module) {
+    if (level < verbosity) {
+        return;
+    }
     const char* tag;
     const char* color;
     time_t now;
     time(&now);
-
-    if (level < verbosity) {
-        return;
-    }
 
     if (level < LOG_DBG || level > LOG_ERR || !strcmp(message, "")) {
         return;
