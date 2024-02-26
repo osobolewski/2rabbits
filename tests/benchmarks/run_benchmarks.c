@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
                 // -help or -h
                 if (inp_err || arg[0] == 'h') {
                     printf("%s usage: [-as (m) (C)] [-rs] [-ecdsa] [-v]\n", argv[0]);
-                    printf("\t-ac: run advanced sampling benchmark. If m or C are omitted or 0, run for m = [1-16] and C = [2-20].\n");
+                    printf("\t-ac: run advanced sampling benchmark. If m or C are omitted or 0, run for m = [1-16] and C = [3-20].\n");
                     printf("\t-rs: run rejection sampling benchmark. If m is omitted or 0, run for m = [1-16] \n");
                     printf("\t-ecdsa: run pure ecdsa benchmark.\n");
                     printf("\t-v: verbose (debug) mode - warning: its VERY verbose\n");
@@ -338,7 +338,7 @@ int main(int argc, char* argv[]) {
             for(int i = 1; i < 17; i++) {
                 // not recommended
                 if (arg_C == 0) {
-                    for(int j = 2; j < 21; j++) {
+                    for(int j = 3; j < 21; j++) {
                         sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", i, j, repetitions);
                         logger(LOG_INFO, print_buf, "BNCH");
                         as_benchmark(i, j, repetitions, Y, y, group_2, signing_key, encryption_key);
@@ -353,7 +353,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (arg_C == 0) {
-            for(int j = 2; j < 21; j++) {
+            for(int j = 3; j < 21; j++) {
                 sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", arg_m_as, j, repetitions);
                 logger(LOG_INFO, print_buf, "BNCH");
                 as_benchmark(arg_m_as, j, repetitions, Y, y, group_2, signing_key, encryption_key);
