@@ -58,3 +58,5 @@ void swap_endian(char* arr, int len);
 int parse_evp_pkey(const EVP_PKEY* pkey, EC_GROUP** group, EC_POINT** public_key, BIGNUM** private_key);
 
 int parse_pem_key(const char* path, EVP_PKEY** pkey, int priv);
+
+int save_to_file(const char* in, const char* path);

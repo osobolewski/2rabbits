@@ -624,3 +624,118 @@ BIGNUM* lut_pop(BIGNUM*** lut, int C, size_t row) {
 
     return NULL;
 }
+
+int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len) {
+    size_t n_rows = ((size_t)1 << m);
+    size_t n_row_elements = (size_t)C * 2;
+
+    // bignums are serialized as
+    // 32 bit len || len-bytes of big endian bignum
+    // if bignum is null, then len is 0
+
+    // first, a dry run is necessary to calculate the number of bytes required; 
+    // first two values serialized are m and C
+    int len_req = 2 * sizeof(int);
+    for(size_t i = 0; i < n_rows; i++) {
+        for (size_t j = 0; j < n_row_elements; j++) {
+            // for len
+            len_req += sizeof(int);
+            // if not null then add number of bytes
+            if (lut[i][j]){
+                len_req += BN_num_bytes(lut[i][j]);
+            }
+        }
+    }
+
+    // if out_arr is null then function has been called to calculate the number
+    // of bytes required
+    if (!out_arr) {
+        *out_arr_len = len_req;
+        return 0;
+    }
+
+    // the buffer has not enough bytes for the
+    // serialized lut
+    if (*out_arr_len < len_req) {
+        return -1;
+    }
+
+    int bytes_written = 0;
+
+    // write m and C
+    memcpy((void*)&out_arr[bytes_written], (void*)&m, sizeof(int));
+    bytes_written += sizeof(int);
+
+    memcpy((void*)&out_arr[bytes_written], (void*)&C, sizeof(int));
+    bytes_written += sizeof(int);
+
+    for(size_t i = 0; i < n_rows; i++) {
+        for (size_t j = 0; j < n_row_elements; j++) {
+            if (lut[i][j]){
+                // first, write the len of the BIGNUM
+                int len = BN_num_bytes(lut[i][j]);
+                memcpy((void*)&out_arr[bytes_written], (void*)&len, sizeof(int));
+                bytes_written += sizeof(int);
+
+                // then, write the bignum itself
+                BN_bn2bin(lut[i][j], &out_arr[bytes_written]); 
+                bytes_written += len;
+            } else {
+                // if number is NULL, write len=0
+                int len = 0;
+                memcpy((void*)&out_arr[bytes_written], (void*)&len, sizeof(int));
+                bytes_written += sizeof(int);
+            }
+        }
+    }
+
+    return bytes_written;
+}
+
+int lut_deserialize(BIGNUM*** lut,int* m, int* C, const char* in_arr, int in_arr_len) {
+    // first, recover m and C
+    int bytes_read = 0;
+    
+    int m_read = 0;
+    memcpy((void*)&m_read, (void*)&in_arr[bytes_read], sizeof(int));
+    bytes_read += sizeof(int);
+
+    int C_read = 0;
+    memcpy((void*)&C_read, (void*)&in_arr[bytes_read], sizeof(int));
+    bytes_read += sizeof(int);
+
+    // if lut is null, then the function was called
+    // to recover only m and C (and thus the required size of lut)
+    if (!lut) {
+        *m = m_read;
+        *C = C_read;
+        return 0;
+    }
+
+    // this means that probably the table will have wrong size
+    if (m_read != *m || C_read != *C){
+        return -1;
+    }
+
+    size_t n_rows = ((size_t)1 << *m);
+    size_t n_row_elements = (size_t)*C * 2;
+
+    for(size_t i = 0; i < n_rows; i++) {
+        for (size_t j = 0; j < n_row_elements; j++) {
+            // first check length of the bignum
+            int len;
+            memcpy((void*)&len, (void*)&in_arr[bytes_read], sizeof(int));
+            bytes_read += sizeof(int);
+
+            // if len = 0, then bignum is NULL, so
+            // we are only concerned with len != 0
+            if (len != 0) {
+                lut[i][j] = BN_new();
+                BN_bin2bn((unsigned char*)&in_arr[bytes_read], len, lut[i][j]);
+                bytes_read += len;
+            }
+        }
+    }
+
+    return bytes_read;
+}

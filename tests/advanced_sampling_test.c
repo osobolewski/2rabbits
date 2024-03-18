@@ -13,7 +13,7 @@ int chrcmp(const char* s1, const char* s2, const int l) {
     return c != 0;
 }
 
-int rs_test(int m, const char* plaintext, int len) {
+int as_test(int m, const char* plaintext, int len) {
     EC_GROUP* group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BIGNUM* private_key = BN_new();
     BIGNUM* order = BN_new();
@@ -46,6 +46,25 @@ int rs_test(int m, const char* plaintext, int len) {
 
     BIGNUM*** lut = lut_new(m, C);
     as_fill(lut, m, C, testing_key, strlen(testing_key), public_key, group);
+
+    logger(LOG_INFO, "Serializing and deserializing the lookup table...", "TEST");
+    char* out;
+    int out_len;
+    lut_serialize(lut, m, C, NULL, &out_len);
+    out = (char*)malloc(out_len*sizeof(char));
+    assert(lut_serialize(lut, m, C, out, &out_len) == out_len);
+
+    lut_free(lut, m, C);
+
+    m = 0;
+    C = 0;
+
+    lut_deserialize(NULL, &m, &C, out, out_len);
+
+    lut = lut_new(m, C);
+    lut_deserialize(lut, &m, &C, out, out_len);
+
+    free(out);
 
     logger(LOG_DBG, "Trying encryption...", "TEST");
     BIGNUM* k = as_encrypt(lut, m, C, plaintext, len, "12345", 6, testing_key, strlen(testing_key), public_key, group);
@@ -91,7 +110,7 @@ int main(int argc, char* argv[]) {
             char print_string[255];
             sprintf(print_string, "Testing for m = %d and str = %s", m, test_strings[i]);
             logger(LOG_INFO, print_string, "TEST");
-            rs_test(m, test_strings[i], strlen(test_strings[i]));
+            as_test(m, test_strings[i], strlen(test_strings[i]));
         }
     }
 
