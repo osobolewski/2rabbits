@@ -390,3 +390,41 @@ int point_2_buffer(char* buffer, size_t len, EC_POINT* point, EC_GROUP* group, B
  
     return ok;   
 }
+
+int save_to_file(const char* in, int in_len, const char* path) {
+    FILE* f = fopen(path,"wb");
+
+    if (!f) {
+        return -1;
+    }
+
+    int ret = fwrite(in, sizeof(char), in_len, f);
+    fclose(f);
+    
+    return ret;
+}
+
+char* read_from_file(const char* path, int* out_len) {
+    FILE* f = fopen(path,"rb");
+
+    if (!f) {
+        return -1;
+    }
+
+    fseek(f, 0L, SEEK_END);
+    int len = ftell(f);
+    rewind(f);
+
+    char* buf = (char*)malloc(len*sizeof(char));
+
+    int ret = fread(buf, sizeof(char), len, f);
+    fclose(f);
+    
+    if (ret < 0) {
+        free(buf);
+        return NULL;
+    }
+
+    *out_len = ret;
+    return buf;
+}
