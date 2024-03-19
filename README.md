@@ -5,8 +5,10 @@ A Proof of Concept implementation of the Advanced Rejection Sampling Algorithm f
 
 Run the `install.sh` script;
 
-Next, build with cmake:
+Next, build with cmake. If you don't know how, you can use these commands (requires `gcc` and `Ninja`):
+
 ```bash
+cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -B ./build -G Ninja
 cmake --build ./build --config Debug --target all --
 ```
 

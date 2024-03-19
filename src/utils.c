@@ -429,7 +429,7 @@ char* read_from_file(const char* path, int* out_len) {
     FILE* f = fopen(path,"rb");
 
     if (!f) {
-        return -1;
+        return NULL;
     }
 
     fseek(f, 0L, SEEK_END);
