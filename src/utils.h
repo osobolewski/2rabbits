@@ -22,6 +22,12 @@ char* hash(const char** inputs, int inputs_arr_len, const int* inputs_lens, int*
 char* chr_2_hex(const char* bytes, size_t len);
 
 /*
+ * Converts a hex string to a char array; 
+ * \return a pointer to a dynamically allocated buffer with the char array, len written to out_len
+ */
+char* hex_2_chr(const char* hex, size_t* out_len);
+
+/*
  * Prints bignum to a string (static buffer)
  * \return string bignum representation  
 */

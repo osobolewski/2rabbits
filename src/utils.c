@@ -27,6 +27,27 @@ char* chr_2_hex(const char* bytes, size_t len) {
     return result;
 }
 
+char* hex_2_chr(const char* hex_str, size_t* out_len) {
+    int len = strlen(hex_str);
+    if ((len % 2) != 0) {
+        return NULL;
+    }
+
+    *out_len = len/2;
+    char* out = (char*)malloc(*out_len * sizeof(char));
+
+    for (size_t i = 0; i < *out_len; i++)
+    {
+        char byte[3];
+        byte[0] = hex_str[i*2]; // upper nibble
+        byte[1] = hex_str[i*2 + 1]; // lower nibble
+        byte[2] = '\0';
+        out[i] = strtol(byte, NULL, 16);
+    }
+
+    return out;
+}
+
 /* \return 0 if n least significant bits of a and b are the same and 1 otherwise*/
 int compare_n_lsb(const char* a, size_t len_a, const char* b, size_t len_b, int n) {
     int bytes_to_check = n/8 + 1;

@@ -69,6 +69,7 @@ err:
 char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
                     EVP_PKEY* enc_pub_key, const char* enc_msg, int enc_msg_len,
                     const char* dkey, int dkey_len, 
+                    const char* delta, int delta_len,
                     int m, int C, BIGNUM*** lut) {
     // We have to use `deprecated` functions
     // here as the new high-level API
@@ -100,7 +101,7 @@ char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
     EC_POINT* r = EC_POINT_new(group);
     BIGNUM* rp = BN_new();
 
-    BIGNUM* k = as_encrypt(lut, m, C, enc_msg, enc_msg_len, sign_msg, strlen(sign_msg), dkey, dkey_len, Y, group);
+    BIGNUM* k = as_encrypt(lut, m, C, enc_msg, enc_msg_len, delta, delta_len, dkey, dkey_len, Y, group);
     BIGNUM* order = BN_new();
 
     if (!k) goto err;

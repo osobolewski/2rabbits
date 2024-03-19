@@ -12,6 +12,7 @@ char* ecdsa_sign_evp(EVP_PKEY* sign_priv_key, const char* sign_message, int* sig
 char* ecdsa_as_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,
                     EVP_PKEY* enc_pub_key, const char* enc_msg, int enc_msg_len,
                     const char* dkey, int dkey_len, 
+                    const char* delta, int delta_len,
                     int m, int C, BIGNUM*** lut);
 
 char* ecdsa_rs_sign(EVP_PKEY* sign_priv_key, const char* sign_msg, int* sig_len,

@@ -76,7 +76,7 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
         // insert
         as_insert(lut, m, C, 0, dkey, strlen(dkey), Y, group);
         // then sign
-        signatures[i] = ecdsa_as_sign(signing_key, messages[i], &signature_lens[i], encryption_key, messages_enc[i], bit_2_byte_len(m), dkey, strlen(dkey), m, C, lut);
+        signatures[i] = ecdsa_as_sign(signing_key, messages[i], &signature_lens[i], encryption_key, messages_enc[i], bit_2_byte_len(m), dkey, strlen(dkey), messages[i], strlen(messages[i]), m, C, lut);
     }
 
     t = (double)(clock() - now) / CLOCKS_PER_SEC;

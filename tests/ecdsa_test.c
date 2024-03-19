@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
     as_fill(lut, m, C, dkey, strlen(dkey), X, group_1);
 
     int sig3_len;
-    char* sig3 = ecdsa_as_sign(privkey, msg, &sig3_len, pubkey_enc, "AA", 2, dkey, strlen(dkey), m, C, lut);
+    char* sig3 = ecdsa_as_sign(privkey, msg, &sig3_len, pubkey_enc, "AA", 2, dkey, strlen(dkey), msg, strlen(msg), m, C, lut);
 
     EC_POINT* r;
 
