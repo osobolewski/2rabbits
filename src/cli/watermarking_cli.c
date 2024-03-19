@@ -284,12 +284,11 @@ int main(int argc, char *argv[]) {
                                 m, C, lut);
 
         printf("m = %d, C = %d\n", m, C);
-        printf("Signed string: '%s'\n", msg);
+        printf("\tSigned string: '%s'\n", msg);
         char* out = recover_n_lsbs_str(enc_msg, strlen(enc_msg), m);
-        printf("Encrypted: %s\n", chr_2_hex(out, bit_2_byte_len(m)));
-        printf("Delta: \n%s\n", delta);
-        printf("Signature: \n%s\n", chr_2_hex(sig, sig_len));
-
+        printf("\tEncrypted: %s\n", chr_2_hex(out, bit_2_byte_len(m)));
+        printf("\tDelta: \n%s\n", delta);
+        printf("\tSignature: \n%s\n", chr_2_hex(sig, sig_len));
         free(out);
         lut_free(lut, m, C);
         free(sig);
