@@ -60,7 +60,7 @@ watermarking [-v] s[ign] '/path/to/lut' '/path/to/sign_key.priv' '/path/to/enc_k
 5. `'message_to_sign'`: Message to be signed with private key
 6. `'watermark'`: Message to be encrypted inside of the signature
 7. `'dual_key'`: String used as a dual key to encrypt the 'watermark'
-8. `['delta']`: [OPTIONAL] Public string to be used for encryption. Default is the timestamp of the signature
+8. `['delta']`: [OPTIONAL] Unique public string to be used for encryption. Default is the timestamp of the signature.
 
 ### Example usage
 
@@ -76,14 +76,12 @@ $ openssl dgst -sha3-256 -verify ./keys/ec-secp256k1-pub-key.pem -signature <(ec
 Verified OK
 ```
 
-
-
 ## Verifying and decrypting
 
 To verify the signature and decrypt the anamorphic message, run the `watermarking` binary with option `d`:
 
 ```bash
-./bin/watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' 'signature' 'message_to_verify' (m) 'dual_key' 'delta'
+./bin/watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' 'signature' 'message_to_verify' (m) 'dual_key' 'delta 1'
 ```
 
 ### Parameters:
@@ -101,7 +99,7 @@ To verify the signature and decrypt the anamorphic message, run the `watermarkin
 ```bash
 watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem "3046022100D3E2F45231AD5064F4E7B179C08F8DBCE1382B4417136515D5FF82EC3AB0BF3E0221009DF15
 08201F320D2EF7A9A3077EAD64B33AD0A461B67054CEC379902D2091590" 'test message' 16 'testing key
-' 'delta'
+' 'delta 1'
 ```
 The recovered message should be the same as provided in the signing step. If its not, check if you're using the same `dual_key`, `delta`, `m`, lookup table, keys and of course sign message!
 

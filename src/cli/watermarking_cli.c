@@ -245,6 +245,16 @@ int main(int argc, char *argv[]) {
         }
         fclose(fp);
 
+        public_key = NULL;
+        group = NULL;
+
+        logger(LOG_INFO, "Parsing the EVP key...", "CLI");
+        if (parse_evp_pkey(enc_key, &group, &public_key, NULL) <= 0) {
+            sprintf(buf, "Parsing the evp key %s failed", enc_key_path);
+            logger(LOG_ERR, buf, "CLI");
+            return -1;   
+        }
+
         logger(LOG_INFO, "Opening the lookup table...", "CLI");
         int lut_serialized_len;
         lut_serialized = read_from_file(lut_path, &lut_serialized_len);
@@ -266,6 +276,11 @@ int main(int argc, char *argv[]) {
         }
         free(lut_serialized);
 
+        logger(LOG_INFO, "Inserting into the lookup table...", "CLI");
+        as_insert(lut, m, C, 0, 
+                dual_key, strlen(dual_key),
+                public_key, group);
+
         logger(LOG_INFO, "Calculating the signature...", "CLI");
         int sig_len;
 
@@ -283,17 +298,42 @@ int main(int argc, char *argv[]) {
                                 delta, strlen(delta),
                                 m, C, lut);
 
+        logger(LOG_INFO, "Serializing the lookup table...", "CLI");
+        if (lut_serialize(lut, m, C, NULL, &len) < 0) {
+            logger(LOG_ERR, "Getting length of serialized buffer failed", "CLI");
+            return -1;   
+        }
+
+        lut_serialized = (char*)malloc(len * sizeof(char));
+
+        if (lut_serialize(lut, m, C, lut_serialized, &len) <= 0) {
+            logger(LOG_ERR, "Serialization of lookup table failed", "CLI");
+            return -1;   
+        }
+
+        logger(LOG_INFO, "Saving the modified lookup table to file...", "CLI");
+        if (save_to_file(lut_serialized, len, lut_path) <= 0) {
+            sprintf(buf, "Saving the file %s failed", lut_path);
+            logger(LOG_ERR, buf, "CLI");
+            return -1;    
+        }
+
+        free(lut_serialized);
+
         printf("m = %d, C = %d\n", m, C);
         printf("\tSigned string: '%s'\n", msg);
         char* out = recover_n_lsbs_str(enc_msg, strlen(enc_msg), m);
         printf("\tEncrypted: %s\n", chr_2_hex(out, bit_2_byte_len(m)));
         printf("\tDelta: \n%s\n", delta);
         printf("\tSignature: \n%s\n", chr_2_hex(sig, sig_len));
+        
         free(out);
         lut_free(lut, m, C);
         free(sig);
         EVP_PKEY_free(enc_key);
         EVP_PKEY_free(sign_key);
+        EC_POINT_free(public_key);
+        EC_GROUP_free(group);
 
         break;
     case 'd':
