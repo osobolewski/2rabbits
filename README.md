@@ -99,9 +99,7 @@ To verify the signature and decrypt the anamorphic message, run the `watermarkin
 ### Example usage
 
 ```bash
-watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem "3046022100D3E2F45231AD5064F4E7B179C08F8DBCE1382B4417136515D5FF82EC3AB0BF3E0221009DF15
-08201F320D2EF7A9A3077EAD64B33AD0A461B67054CEC379902D2091590" 'test message' 16 'testing key
-' 'delta 1'
+watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem "3046022100D3E2F45231AD5064F4E7B179C08F8DBCE1382B4417136515D5FF82EC3AB0BF3E0221009DF1508201F320D2EF7A9A3077EAD64B33AD0A461B67054CEC379902D2091590" 'test message' 16 'testing key' 'delta 1'
 ```
 The recovered message should be the same as provided in the signing step. If its not, check if you're using the same `dual_key`, `delta`, `m`, lookup table, keys and of course sign message!
 

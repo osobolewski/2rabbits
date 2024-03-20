@@ -60,7 +60,7 @@ axes[0,1].set_axis_off()
 axes[1,1].set_axis_off()
 xdata = x_m
 ydata = [y_rs_sign, y_rs_verif]
-ylabel = ["Time (log scale) [ms]", "Time [ms]"]
+ylabel = ["Time (log scale)", "Time"]
 ylim = [(0.1, 10 ** 4), (0, 2)]
 scale = ["log", "linear"]
 titles = ["Rejection Sampling SIGN time (average from n = 100)", "Rejection Sampling VERIFY + DECRYPT time (average from n = 100)"]
@@ -164,7 +164,7 @@ ylim = [(0, 2), (0, 2), (0, 2500), (25000, 170000)]
 scale = ["linear", "linear", "linear",  "linear"]
 fig.suptitle('Advanced Sampling benchmarks with variable C, constant m = 8', fontsize=16)
 
-titles = ["Advanced Sampling SIGN time (average from n = 1000)", 
+titles = ["Advanced Sampling INSERT + ENCRYPT + SIGN time (average from n = 1000)", 
           "Advanced Sampling VERIFY + DECRYPT time (average from n = 1000)",
           "Advanced Sampling FILL time",
           "Advanced Sampling LUT size"]
