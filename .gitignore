@@ -64,3 +64,4 @@ vgcore*
 massif*
 
 *.out
+*.bin

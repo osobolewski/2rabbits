@@ -76,7 +76,13 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
         // insert
         as_insert(lut, m, C, 0, dkey, strlen(dkey), Y, group);
         // then sign
-        signatures[i] = ecdsa_as_sign(signing_key, messages[i], &signature_lens[i], encryption_key, messages_enc[i], bit_2_byte_len(m), dkey, strlen(dkey), messages[i], strlen(messages[i]), m, C, lut);
+        signatures[i] = ecdsa_as_sign(signing_key, 
+                            messages[i], strlen(messages[i]), 
+                            &signature_lens[i], encryption_key, 
+                            messages_enc[i], bit_2_byte_len(m), 
+                            dkey, strlen(dkey), 
+                            messages[i], strlen(messages[i]), 
+                            m, C, lut);
     }
 
     t = (double)(clock() - now) / CLOCKS_PER_SEC;
@@ -90,7 +96,7 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
 
     now = clock();
     for (int i = 0; i < repetitions; i++) {
-        assert(ecdsa_verify_full(signing_key, messages[i], signatures[i], signature_lens[i], &rs[i]) == 1);
+        assert(ecdsa_verify_full(signing_key, messages[i], strlen(messages[i]), signatures[i], signature_lens[i], &rs[i]) == 1);
         plaintexts[i] = as_decrypt(m, messages[i], strlen(messages[i]), dkey, strlen(dkey), rs[i], y, group);
     }
     t = (double)(clock() - now) / CLOCKS_PER_SEC;
@@ -134,7 +140,7 @@ void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* 
     time_t now = clock();
     for (int i = 0; i < repetitions; i++) {
         // just sign
-        signatures[i] =  ecdsa_rs_sign(signing_key, messages[i], &signature_lens[i], encryption_key, messages_enc[i], bit_2_byte_len(m), m);
+        signatures[i] =  ecdsa_rs_sign(signing_key, messages[i], strlen(messages[i]), &signature_lens[i], encryption_key, messages_enc[i], bit_2_byte_len(m), m);
     }
 
     double t = (double)(clock() - now) / CLOCKS_PER_SEC;
@@ -148,7 +154,7 @@ void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* 
 
     now = clock();
     for (int i = 0; i < repetitions; i++) {
-        assert(ecdsa_verify_full(signing_key, messages[i], signatures[i], signature_lens[i], &rs[i]) == 1);
+        assert(ecdsa_verify_full(signing_key, messages[i], strlen(messages[i]), signatures[i], signature_lens[i], &rs[i]) == 1);
         plaintexts[i] = rs_decrypt(m, rs[i], y, group);
     }
     t = (double)(clock() - now) / CLOCKS_PER_SEC;
@@ -187,7 +193,7 @@ void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key) {
     time_t now = clock();
     for (int i = 0; i < repetitions; i++) {
         // just sign
-        signatures[i] =  ecdsa_sign_evp(signing_key, messages[i], &signature_lens[i]);
+        signatures[i] =  ecdsa_sign_evp(signing_key, messages[i], strlen(messages[i]), &signature_lens[i]);
     }
 
     double t = (double)(clock() - now) / CLOCKS_PER_SEC;
@@ -197,7 +203,7 @@ void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key) {
     // verify signatures
     now = clock();
     for (int i = 0; i < repetitions; i++) {
-        assert(ecdsa_verify_evp(signing_key, messages[i], signatures[i], signature_lens[i]) == 1);
+        assert(ecdsa_verify_evp(signing_key, messages[i], strlen(messages[i]), signatures[i], signature_lens[i]) == 1);
     }
     t = (double)(clock() - now) / CLOCKS_PER_SEC;
 

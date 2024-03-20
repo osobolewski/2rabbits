@@ -53,27 +53,27 @@ int main(int argc, char* argv[]) {
     char msg[] = "A message to sign 101";
 
     int sig1_len, sig2_len;
-    char* sig1 = ecdsa_sign(privkey, msg, &sig1_len);
+    char* sig1 = ecdsa_sign(privkey, msg, strlen(msg), &sig1_len);
 
     char print_buf[200];
 
     sprintf(print_buf, "sig1: %s", chr_2_hex(sig1, sig1_len));
     logger(LOG_INFO, print_buf, "TEST");
 
-    char* sig2 = ecdsa_sign_evp(privkey, msg, &sig2_len);
+    char* sig2 = ecdsa_sign_evp(privkey, msg, strlen(msg), &sig2_len);
 
     sprintf(print_buf, "sig2: %s", chr_2_hex(sig2, sig2_len));
     logger(LOG_INFO, print_buf, "TEST");
 
-    int verif1 = ecdsa_verify_evp(pubkey, msg, sig1, sig1_len);
-    int verif2 = ecdsa_verify_openssl(pubkey, msg, sig1, sig1_len);
-    int verif3 = ecdsa_verify_full(pubkey, msg, sig1, sig1_len, NULL);
+    int verif1 = ecdsa_verify_evp(pubkey, msg, strlen(msg), sig1, sig1_len);
+    int verif2 = ecdsa_verify_openssl(pubkey, msg, strlen(msg), sig1, sig1_len);
+    int verif3 = ecdsa_verify_full(pubkey, msg, strlen(msg), sig1, sig1_len, NULL);
 
     assert(verif1 == 1 && verif2 == 1 && verif3 == 1);
 
-    verif1 = ecdsa_verify_evp(pubkey, msg, sig2, sig2_len);
-    verif2 = ecdsa_verify_openssl(pubkey, msg, sig2, sig2_len);
-    verif3 = ecdsa_verify_full(pubkey, msg, sig2, sig2_len, NULL);
+    verif1 = ecdsa_verify_evp(pubkey, msg, strlen(msg), sig2, sig2_len);
+    verif2 = ecdsa_verify_openssl(pubkey, msg, strlen(msg), sig2, sig2_len);
+    verif3 = ecdsa_verify_full(pubkey, msg, strlen(msg), sig2, sig2_len, NULL);
 
     assert(verif1 == 1 && verif2 == 1 && verif3 == 1);
 
@@ -90,13 +90,16 @@ int main(int argc, char* argv[]) {
     as_fill(lut, m, C, dkey, strlen(dkey), X, group_1);
 
     int sig3_len;
-    char* sig3 = ecdsa_as_sign(privkey, msg, &sig3_len, pubkey_enc, "AA", 2, dkey, strlen(dkey), msg, strlen(msg), m, C, lut);
+    char* sig3 = ecdsa_as_sign(privkey, msg, strlen(msg), 
+                            &sig3_len, pubkey_enc, 
+                            "AA", 2, dkey, strlen(dkey), 
+                            msg, strlen(msg), m, C, lut);
 
     EC_POINT* r;
 
-    verif1 = ecdsa_verify_evp(pubkey, msg, sig3, sig3_len);
-    verif2 = ecdsa_verify_openssl(pubkey, msg, sig3, sig3_len);
-    verif3 = ecdsa_verify_full(pubkey, msg, sig3, sig3_len, &r);
+    verif1 = ecdsa_verify_evp(pubkey, msg, strlen(msg), sig3, sig3_len);
+    verif2 = ecdsa_verify_openssl(pubkey, msg, strlen(msg), sig3, sig3_len);
+    verif3 = ecdsa_verify_full(pubkey, msg, strlen(msg), sig3, sig3_len, &r);
 
     sprintf(print_buf, "sig3: %s", chr_2_hex(sig3, sig3_len));
     logger(LOG_INFO, print_buf, "TEST");
@@ -115,12 +118,12 @@ int main(int argc, char* argv[]) {
     lut_free(lut, m, C);
 
     int sig4_len;
-    char* sig4 = ecdsa_rs_sign(privkey, msg, &sig4_len, pubkey_enc, "BB", 2, m);
+    char* sig4 = ecdsa_rs_sign(privkey, msg, strlen(msg), &sig4_len, pubkey_enc, "BB", 2, m);
 
     EC_POINT_free(r);
-    verif1 = ecdsa_verify_evp(pubkey, msg, sig4, sig4_len);
-    verif2 = ecdsa_verify_openssl(pubkey, msg, sig4, sig4_len);
-    verif3 = ecdsa_verify_full(pubkey, msg, sig4, sig4_len, &r);
+    verif1 = ecdsa_verify_evp(pubkey, msg, strlen(msg), sig4, sig4_len);
+    verif2 = ecdsa_verify_openssl(pubkey, msg, strlen(msg), sig4, sig4_len);
+    verif3 = ecdsa_verify_full(pubkey, msg, strlen(msg), sig4, sig4_len, &r);
 
     sprintf(print_buf, "sig4: %s", chr_2_hex(sig4, sig4_len));
     logger(LOG_INFO, print_buf, "TEST");
