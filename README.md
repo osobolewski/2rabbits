@@ -68,7 +68,7 @@ watermarking [-v] s[ign] '/sign.bin' '/path/to/lut' '/path/to/sign_key.priv' '/p
 ### Example usage
 
 ```bash
-watermarking s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out 'bb' 'testing key'
+./bin/watermarking s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out 'bb' 'testing key'
 ```
 
 The signature will verify with 'normal' openssl verification as well. You can check it with command like this:
@@ -84,7 +84,7 @@ Verified OK
 To verify the signature and decrypt the anamorphic message, run the `watermarking` binary with option `d`:
 
 ```bash
-./bin/watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' '/path/to/sig.bin' '/path/to/sign_msg.txt' (m) 'dual_key' 'delta'
+watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' '/path/to/sig.bin' '/path/to/sign_msg.txt' (m) 'dual_key' 'delta'
 ```
 
 ### Parameters:
@@ -100,7 +100,7 @@ To verify the signature and decrypt the anamorphic message, run the `watermarkin
 ### Example usage
 
 ```bash
-watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 16 'testing key' 1710952827
+./bin/watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 16 'testing key' 1710952827
 ```
 The recovered message should be the same as provided in the signing step. If its not, check if you're using the same `dual_key`, `delta`, `m`, lookup table, keys and of course sign message!
 
