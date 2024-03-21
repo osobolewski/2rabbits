@@ -41,7 +41,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t'watermark': Message to be encrypted inside of the signature\n");
         printf("\t'dual_key': String used as a dual key to encrypt the 'watermark'\n");
         printf("\t['delta']: [OPTIONAL] Public string to be used for encryption. Default is the timestamp of the signature\n");
-        printf("Ex: %s s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out bb 'Secret dual key' 'Some unique public string 1'\n", prog_name);
+        printf("Ex: %s s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.test bb 'Secret dual key' 'Some unique public string 1'\n", prog_name);
     }
 
     if (print_mask & 0b100) {
@@ -56,7 +56,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t(m): Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 17\n");
         printf("\t'dual_key': String used as a dual key to decrypt the anamorphic message\n");
         printf("\t'delta': Public string to be used for decryption. By default its the timestamp of the signature\n");
-        printf("Ex: %s d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 8 'Secret dual key' 'Some unique public string 1'\n", prog_name);
+        printf("Ex: %s d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.test 8 'Secret dual key' 'Some unique public string 1'\n", prog_name);
     }
 }
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
             return -1;    
         }
 
-        printf("Lookup table written to %s.\n", save_path);
+        printf("Lookup table written to '%s'.\n", save_path);
 
         free(lut_serialized);
         lut_free(lut, m, C);
@@ -358,7 +358,7 @@ int main(int argc, char *argv[]) {
             return -1;       
         }
 
-        printf("Signature written to %s. Remember to save the delta!\n", sig_path);
+        printf("Signature written to '%s'. Remember to save the delta!\n", sig_path);
 
         free(out);
         free(msg);
@@ -479,8 +479,8 @@ int main(int argc, char *argv[]) {
                                     r, priv_key, group);
 
         printf("m = %d\n", m);
-        printf("Decrypted: \n%s\n", plaintext);
-        printf("Decrypted (hex): \n%s\n", chr_2_hex(plaintext, bit_2_byte_len(m)));
+        printf("\tDecrypted: \n%s\n", plaintext);
+        printf("\tDecrypted (hex): \n%s\n", chr_2_hex(plaintext, bit_2_byte_len(m)));
         
         EC_POINT_free(r);
         EVP_PKEY_free(enc_key);

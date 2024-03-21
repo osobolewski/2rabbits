@@ -5,7 +5,13 @@ A Proof of Concept implementation of the Advanced Rejection Sampling Algorithm f
 
 Run the `install.sh` script;
 
-Next, build with cmake. If you don't know how, you can use these commands (requires `gcc` and `Ninja`):
+Next, build with cmake. 
+If you don't know how, you can use this (requires `gcc/clang` and `make`):
+```bash
+cmake -B build && cd build && make
+```
+
+or e.g. this for debug build (requires `gcc` and `Ninja`):
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -B ./build -G Ninja
@@ -41,7 +47,7 @@ watermarking [-v] g[enerate_lut] '/save/path' '/path/to/enc_key.pub' (m) [C] 'du
 ### Example usage: 
 
 ```bash
-$ ./bin/watermarking -v generate_lut lut.out ./keys/ec-secp256k1-pub-key_enc.pem 4 'testing key'
+./bin/watermarking -v generate_lut lut.out ./keys/ec-secp256k1-pub-key_enc.pem 8 5 'Secret dual key'
 ```
 
 The serialized lookup table is required for anamorphic signing.
@@ -68,13 +74,13 @@ watermarking [-v] s[ign] '/sign.bin' '/path/to/lut' '/path/to/sign_key.priv' '/p
 ### Example usage
 
 ```bash
-./bin/watermarking s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out 'bb' 'testing key'
+./bin/watermarking s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.test 'bb' 'Secret dual key' 'Some unique public string 1'
 ```
 
 The signature will verify with 'normal' openssl verification as well. You can check it with command like this:
 
 ```bash
-$ openssl dgst -sha3-256 -verify ./keys/ec-secp256k1-pub-key.pem -signature sign.bin msg.out
+$ openssl dgst -sha3-256 -verify ./keys/ec-secp256k1-pub-key.pem -signature sign.bin msg.test
 
 Verified OK
 ```
@@ -100,7 +106,7 @@ watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' '/pa
 ### Example usage
 
 ```bash
-./bin/watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 16 'testing key' 1710952827
+./bin/watermarking d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.test 8 'Secret dual key' 'Some unique public string 1'
 ```
 The recovered message should be the same as provided in the signing step. If its not, check if you're using the same `dual_key`, `delta`, `m`, lookup table, keys and of course sign message!
 
