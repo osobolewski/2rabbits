@@ -39,10 +39,41 @@ x_m = [i for i in range(1, 17)]
 y_rs_sign = [0.678, 0.733, 0.842, 0.923, 1.201, 1.669, 2.849, 4.706, 8.209, 18.922, 33.353, 63.038, 121.048, 244.282, 624.518, 1045.035]
 y_rs_verif = [0.585, 0.603, 0.656, 0.670, 0.682, 1.050, 0.729, 0.673, 0.684, 0.683, 0.702, 0.695, 0.688, 0.701, 1.011, 0.710]
 
+with open("rs_benchmark_results.out", "r") as f:
+    column_names = f.readline().strip().split(",")
+    for i, line in enumerate(f):
+        vals = line.strip().split(",")
+        if int(x_m[i] != int(vals[0]) or len(vals) != 3):
+            print("Error in input file")
+            exit(0)
+        y_rs_sign[i] = float(vals[1])
+        y_rs_verif[i] = float(vals[2])
+
+print(y_rs_sign)
+print(y_rs_verif)
+
 y_as_fill = [3.640, 7.861, 16.459, 39.720, 75.515, 182.534, 309.605, 661.855, 1499.275, 3569.076, 6582.784, 14468.181, 27361.288, 63752.537, 124624.051, 238438.082]
 y_as_lut_size = [344, 680, 1352, 2696, 5381, 10760, 21512, 43012, 86011, 172022, 344039, 688051, 1376108, 2752223, 5504416, 11008758]
 y_as_sign = [1.011, 1.093, 1.130, 1.130, 1.120, 1.122, 1.132, 1.104, 1.111, 1.168, 1.099, 1.136, 1.181, 1.184, 1.162, 1.120]
 y_as_verif = [0.635, 0.630, 0.655, 0.635, 0.680, 0.653, 0.649, 0.693, 0.655, 0.646, 0.642, 0.660, 0.749, 0.686, 0.672, 0.649]
+
+with open("as_var_M_benchmark_results.out", "r") as f:
+    column_names = f.readline().strip().split(",")
+    for i, line in enumerate(f):
+        vals = line.strip().split(",")
+        if int(x_m[i] != int(vals[0]) or len(vals) != 6):
+            print("Error in input file")
+            exit(0)
+        const_C = int(vals[1])
+        y_as_fill[i] = float(vals[2])
+        y_as_lut_size[i] = int(vals[3])
+        y_as_sign[i] = float(vals[4])
+        y_as_verif[i] = float(vals[5])
+
+print(y_as_fill)
+print(y_as_lut_size)
+print(y_as_sign)
+print(y_as_verif)
 
 x_C = [i for i in range(3, 21)]
 y_as_fill_const_m = [454.498, 757.061, 685.654, 891.153, 921.880, 1058.048, 985.858, 1286.219, 1278.191, 1367.442, 1381.675, 1410.611, 1629.252, 1622.521, 1857.896, 1814.492, 1916.452, 2216.010]
@@ -50,10 +81,41 @@ y_as_lut_size_const_m = [26630, 34822, 43013, 51204, 59390, 67591, 75781, 83969,
 y_as_sign_const_m = [1.093, 1.071, 1.079, 1.112, 1.077, 1.083, 1.082, 1.090, 1.072, 1.111, 1.074, 1.078, 1.079, 1.089, 1.191, 1.119, 1.084, 1.090]
 y_as_verif_const_m = [0.637, 0.644, 0.661, 0.646, 0.649, 0.671, 0.636, 0.636, 0.645, 0.650, 0.643, 0.664, 0.646, 0.644, 0.642, 0.645,0.646,  0.672]
 
+with open("as_var_C_benchmark_results.out", "r") as f:
+    column_names = f.readline().strip().split(",")
+    for i, line in enumerate(f):
+        vals = line.strip().split(",")
+        if int(x_C[i] != int(vals[1]) or len(vals) != 6):
+            print("Error in input file")
+            exit(0)
+        const_m = int(vals[0])
+        y_as_fill_const_m[i] = float(vals[2])
+        y_as_lut_size_const_m[i] = int(vals[3])
+        y_as_sign_const_m[i] = float(vals[4])
+        y_as_verif_const_m[i] = float(vals[5])
+
+print(y_as_fill_const_m)
+print(y_as_lut_size_const_m)
+print(y_as_sign_const_m)
+print(y_as_verif_const_m)
+
 print(len(x_C), len(y_as_fill_const_m), len(y_as_lut_size_const_m), len(y_as_sign_const_m), len(y_as_verif_const_m))
 
 y_baseline_sign = [0.315 for x in range(1, 17)]
 y_baseline_verif = [0.288 for x in range(1, 17)]
+
+with open("ecdsa_benchmark_results.out", "r") as f:
+    column_names = f.readline().strip().split(",")
+    for i, line in enumerate(f):
+        vals = line.strip().split(",")
+        y_baseline_sign[i] = float(vals[1])
+        y_baseline_verif[i] = float(vals[1])
+
+y_baseline_sign = [y_baseline_sign[0] for x in range(1, 17)]
+y_baseline_verif = [y_baseline_verif[0] for x in range(1, 17)]
+
+print(y_baseline_sign)
+print(y_baseline_verif)
 
 fig, axes = plt.subplots(2, 2, figsize=[7,5])
 axes[0,1].set_axis_off()
@@ -110,10 +172,10 @@ ydata = [y_as_sign, y_as_verif, y_as_fill,  y_as_lut_size]
 ylabel = ["Time", "Time", "Time (log scale)",  "Size (log scale)"]
 ylim = [(0, 2), (0, 2), (0.1, 10 ** 6), (100, 10 ** 8)]
 scale = ["linear", "linear", "log",  "log"]
-fig.suptitle('Advanced Sampling benchmarks with variable m, constant C = 5', fontsize=16)
+fig.suptitle(f'Advanced Sampling benchmarks with variable m, constant C = {const_C}', fontsize=16)
 
-titles = ["Advanced Sampling SIGN time (average from n = 1000)", 
-          "Advanced Sampling VERIFY + DECRYPT time (average from n = 1000)",
+titles = ["Advanced Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
+          "Advanced Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
           "Advanced Sampling FILL time",
           "Advanced Sampling LUT size"]
 fmt = [time_fmt, time_fmt, time_fmt, sizeof_fmt]
@@ -162,10 +224,10 @@ ydata = [y_as_sign_const_m, y_as_verif_const_m, y_as_fill_const_m,  y_as_lut_siz
 ylabel = ["Time", "Time", "Time",  "Size"]
 ylim = [(0, 2), (0, 2), (0, 2500), (25000, 170000)]
 scale = ["linear", "linear", "linear",  "linear"]
-fig.suptitle('Advanced Sampling benchmarks with variable C, constant m = 8', fontsize=16)
+fig.suptitle(f'Advanced Sampling benchmarks with variable C, constant m = {const_m}', fontsize=16)
 
-titles = ["Advanced Sampling INSERT + ENCRYPT + SIGN time (average from n = 1000)", 
-          "Advanced Sampling VERIFY + DECRYPT time (average from n = 1000)",
+titles = ["Advanced Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
+          "Advanced Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
           "Advanced Sampling FILL time",
           "Advanced Sampling LUT size"]
 fmt = [time_fmt, time_fmt, time_fmt, sizeof_fmt]
@@ -284,7 +346,7 @@ ax.legend()
 # set the basic properties
 ax.set_xlabel('Anamorphic message length [bits]')
 ax.set_ylabel("Time")
-ax.set_title("RS, AS and pure ECDSA VERIFY (+DECRYPT) time")
+ax.set_title("RS, AS and pure ECDSA VERIFY time")
 
 # set the limits
 ax.set_xlim(1, 17)

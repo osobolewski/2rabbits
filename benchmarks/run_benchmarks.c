@@ -48,7 +48,10 @@ long long get_lut_size(BIGNUM*** lut, int m, int C) {
     return size;
 }
 
-void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROUP* group, EVP_PKEY* signing_key, EVP_PKEY* encryption_key) {
+void as_benchmark(int m, int C, int repetitions, 
+                  EC_POINT* Y, BIGNUM* y, EC_GROUP* group, 
+                  EVP_PKEY* signing_key, EVP_PKEY* encryption_key, 
+                  float* fill_time, long long* lut_size, float* sign_time, float* verify_time) {
     char print_buf[200];
     const char dkey[] = "dual key";
 
@@ -62,9 +65,13 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
     sprintf(print_buf, "as_fill time: %.3f ms", t*1000);
     logger(LOG_INFO, print_buf, "BNCH");
 
+    *fill_time = t*1000;
+
     long long size = get_lut_size(lut, m, C);
     sprintf(print_buf, "Filled LUT size: %u bytes", size);
     logger(LOG_INFO, print_buf, "BNCH");
+
+    *lut_size = size;
 
     // create messages to sign;
     // and messages to encrypt
@@ -98,6 +105,8 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
     sprintf(print_buf, "Average as_sign time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
 
+    *sign_time = t*1000/(double)repetitions;
+
     // verify signatures, recover plaintexts
     EC_POINT* rs[repetitions];
     char* plaintexts[repetitions];
@@ -112,6 +121,8 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
 
     sprintf(print_buf, "Average as verification + plaintext recovery time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
+
+    *verify_time = t*1000/(double)repetitions;
 
     // assert that the decryptions were successful
     for (int i = 0; i < repetitions; i++) {
@@ -128,7 +139,10 @@ void as_benchmark(int m, int C, int repetitions, EC_POINT* Y, BIGNUM* y, EC_GROU
     lut_free(lut, m, C);
 }
 
-void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* signing_key, EVP_PKEY* encryption_key) {
+void rs_benchmark(int m, int repetitions, 
+                  BIGNUM* y, EC_GROUP* group, 
+                  EVP_PKEY* signing_key, EVP_PKEY* encryption_key,
+                  float* sign_time, float* verify_time) {
     char print_buf[200];
     const char dkey[] = "dual key";
 
@@ -156,6 +170,8 @@ void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* 
     sprintf(print_buf, "Average rs_sign time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
 
+    *sign_time = t*1000/(double)repetitions;
+
     // verify signatures, recover plaintexts
     EC_POINT* rs[repetitions];
     char* plaintexts[repetitions];
@@ -171,6 +187,8 @@ void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* 
     sprintf(print_buf, "Average rs verification + plaintext recovery time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
 
+    *verify_time = t*1000/(double)repetitions;
+
     // assert that the decryptions were successful
     for (int i = 0; i < repetitions; i++) {
         assert(compare_n_lsb(plaintexts[i], bit_2_byte_len(m), messages_enc[i], bit_2_byte_len(m), m) == 0);
@@ -184,7 +202,7 @@ void rs_benchmark(int m, int repetitions, BIGNUM* y, EC_GROUP* group, EVP_PKEY* 
     }
 }
 
-void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key) {
+void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key, float* sign_time, float* verify_time) {
     char print_buf[200];
     const char dkey[] = "dual key";
 
@@ -209,6 +227,8 @@ void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key) {
     sprintf(print_buf, "Average ecdsa_sign time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
 
+    *sign_time = t*1000/(double)repetitions;
+
     // verify signatures
     now = clock();
     for (int i = 0; i < repetitions; i++) {
@@ -218,6 +238,8 @@ void ecdsa_benchmark(int repetitions, EVP_PKEY* signing_key) {
 
     sprintf(print_buf, "Average ecdsa verification time: %.3f ms for %d repetitions", t*1000/(double)repetitions, repetitions);
     logger(LOG_INFO, print_buf, "BNCH");
+
+    *verify_time = t*1000/(double)repetitions;
 
     for (int i = 0; i < repetitions; i++) {
         free(signatures[i]);
@@ -234,7 +256,6 @@ int main(int argc, char* argv[]) {
     int arg_m_rs = 0;
     int arg_C = 0;
     char print_buf[200];
-    
 
     // run all benchmarks
     if (argc < 2) {
@@ -350,32 +371,75 @@ int main(int argc, char* argv[]) {
     if (arg_benchmark_as) {
         int start_m = 1;
         int end_m = 17;
+        int variable_M = 1;
 
         // if m is specified from params, only run for that m
         if (arg_m_as){
             start_m = arg_m_as;
             end_m = arg_m_as + 1;
+            variable_M = 0;
         }
 
         int start_C = 3;
         int end_C = 21;
+        int variable_C = 1;
 
         // if C is specified from params, only run for that C
         if (arg_C) {
             start_C = arg_C;
             end_C = arg_C + 1;
+            variable_C = 0;
         } 
 
-        char time_results[(end_m - start_m) * (end_C - start_C)];
-        char lut_size_results[(end_m - start_m) * (end_C - start_C)];
+        float sign_time_results[(end_m - start_m) * (end_C - start_C)];
+        long long lut_size_results[(end_m - start_m) * (end_C - start_C)];
+        float fill_time_results[(end_m - start_m) * (end_C - start_C)];
+        float verify_time_results[(end_m - start_m) * (end_C - start_C)];
+
+        char names[(end_m - start_m) * (end_C - start_C)][100];
 
         for(int m = start_m; m < end_m; m++) {
             for(int C = start_C; C < end_C; C++/* heh */) {
+                int current_m = m - start_m;
+                int current_C = C - start_C;
+                int current_index = current_m*(end_C - start_C) + current_C;
+
                 sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", m, C, repetitions);
+                sprintf(names[current_index], "%d,%d", m, C);
                 logger(LOG_INFO, print_buf, "BNCH");
-                as_benchmark(m, C, repetitions, Y, y, group_2, signing_key, encryption_key);
-            }              
+                as_benchmark(m, C, repetitions, Y, y, group_2, signing_key, encryption_key, 
+                             &fill_time_results[current_index], 
+                             &lut_size_results[current_index], 
+                             &sign_time_results[current_index], 
+                             &verify_time_results[current_index]);
+            }       
         }
+
+        for(int i = 0; i < (end_m - start_m) * (end_C - start_C); i++) {
+            sprintf(print_buf, "Results for as m,c=%s: fill_time=%.3f, lut_size=%lld, sign_time=%.3f, verify_time=%.3f", 
+                    names[i], fill_time_results[i], lut_size_results[i], sign_time_results[i], verify_time_results[i]);
+            logger(LOG_INFO, print_buf, "BNCH");
+        }
+
+        FILE* fp;
+        if (variable_C) {
+            fp = fopen("as_var_C_benchmark_results.out", "w");
+        } else if (variable_M) {
+            fp = fopen("as_var_M_benchmark_results.out", "w");
+        } else {
+            fp = fopen("as_benchmark_results.out", "w");
+        }
+        
+        if (fp == NULL) {
+            logger(LOG_ERR, "Error opening file for writing", "BNCH");
+            return 1;
+        }
+
+        fprintf(fp, "m,C,fill_time,lut_size,sign_time,verify_time\n");
+        for(int i = 0; i < (end_m - start_m) * (end_C - start_C); i++) {
+            fprintf(fp, "%s,%.3f,%lld,%.3f,%.3f\n", names[i], fill_time_results[i], lut_size_results[i], sign_time_results[i], verify_time_results[i]);
+        }
+        fclose(fp);
     }
 
     // rs_sign tends to be very slow for b >= 12
@@ -392,17 +456,56 @@ int main(int argc, char* argv[]) {
             end_m = arg_m_rs + 1;
         }
 
+        float sign_time_results[end_m - start_m];
+        float verify_time_results[end_m - start_m];
+
         for(int m = start_m; m < end_m; m++) {
             sprintf(print_buf, "Starting rs_benchmark with: m=%d, repetitions=%d", m, repetitions);
             logger(LOG_INFO, print_buf, "BNCH");
-            rs_benchmark(m, repetitions, y, group_2, signing_key, encryption_key);
+            rs_benchmark(m, repetitions, y, group_2, signing_key, encryption_key, 
+                         &sign_time_results[m - start_m], 
+                         &verify_time_results[m - start_m]);
         } 
+
+        for (int i = 0; i < end_m - start_m; i++) {
+            sprintf(print_buf, "Results for rs m=%d: sign_time=%.3f, verify_time=%.3f", 
+                    i + start_m, sign_time_results[i], verify_time_results[i]);
+            logger(LOG_INFO, print_buf, "BNCH");
+        }
+
+        FILE* fp = fopen("rs_benchmark_results.out", "w");
+        if (fp == NULL) {
+            logger(LOG_ERR, "Error opening file for writing", "BNCH");
+            return 1;
+        }
+        
+        fprintf(fp, "m,sign_time,verify_time\n");
+        for (int i = 0; i < end_m - start_m; i++) {
+            fprintf(fp, "%d,%.3f,%.3f\n", i + start_m, sign_time_results[i], verify_time_results[i]);
+        }
+        fclose(fp);
     }
 
     repetitions = 1000;
 
     if (arg_benchmark_ecdsa) {
-        ecdsa_benchmark(repetitions, signing_key);
+        float sign_time;
+        float verify_time;
+
+        ecdsa_benchmark(repetitions, signing_key, &sign_time, &verify_time);
+
+        sprintf(print_buf, "Results for ecdsa: sign_time=%.3f, verify_time=%.3f", sign_time, verify_time);
+        logger(LOG_INFO, print_buf, "BNCH");
+
+        FILE* fp = fopen("ecdsa_benchmark_results.out", "w");
+        if (fp == NULL) {
+            logger(LOG_ERR, "Error opening file for writing", "BNCH");
+            return 1;
+        }
+
+        fprintf(fp, "sign_time,verify_time\n");
+        fprintf(fp, "%.3f,%.3f\n", sign_time, verify_time);
+        fclose(fp);
     }
 
     EVP_PKEY_free(signing_key);
