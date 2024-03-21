@@ -173,6 +173,8 @@ int main(int argc, char *argv[]) {
             return -1;    
         }
 
+        printf("Lookup table written to %s.\n", save_path);
+
         free(lut_serialized);
         lut_free(lut, m, C);
         EC_GROUP_free(group);
