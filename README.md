@@ -112,7 +112,7 @@ The recovered message should be the same as provided in the signing step. If its
 
 # Benchmarks
 
-To run benchmarks and visualize, first build and cd into the benchmarks folder:
+To run benchmarks, first build all binaries and cd into the benchmarks folder:
 
 ```bash
 cd benchmarks
@@ -124,7 +124,7 @@ Then, run all of the benchmarks to generate output csv files:
 ./benchmark -ecdsa && ./benchmark -rs && ./benchmark -as 0 5 && ./benchmark -as 8 0
 ```
 
-To visualize benchmark results, run the python script (requires `matplotlib`):
+To visualize benchmark results, run the python script (requires `matplotlib` and `numpy`):
 ```bash
 python visualize_benchmarks.py
 ```
