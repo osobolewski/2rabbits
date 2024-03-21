@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
             return -1;
         } 
 
-        sprintf(buf, "msg_path = %s, enc_msg = %s, dkey = %s", chr_2_hex(msg, msg_len), enc_msg, dual_key);
+        sprintf(buf, "msg_path = %s, enc_msg = %s, dkey = %s", msg_path, enc_msg, dual_key);
         logger(LOG_DBG, buf, "CLI");
         if (custom_delta) logger(LOG_DBG, strcat(strcpy(buf, "delta = "), custom_delta), "CLI");
 
