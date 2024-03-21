@@ -404,6 +404,11 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
+        if (m <= 0 || m >= 17) {
+            logger(LOG_ERR, "Invalid m value", "CLI");
+            return -1;
+        }
+
         sprintf(buf, "msg_path = %s, dual_key = %s, delta = %s, m = %d", msg_path, dual_key, custom_delta, m);
         logger(LOG_DBG, buf, "CLI");
         sprintf(buf, "sig = %s", chr_2_hex(sig, sig_len));
