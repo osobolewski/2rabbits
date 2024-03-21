@@ -404,7 +404,7 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        sprintf(buf, "msg_path = %s, dual_key = %s, delta = %s, m = %d", chr_2_hex(msg, msg_len), dual_key, custom_delta, m);
+        sprintf(buf, "msg_path = %s, dual_key = %s, delta = %s, m = %d", msg_path, dual_key, custom_delta, m);
         logger(LOG_DBG, buf, "CLI");
         sprintf(buf, "sig = %s", chr_2_hex(sig, sig_len));
         logger(LOG_DBG, buf, "CLI");
