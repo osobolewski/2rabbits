@@ -48,7 +48,7 @@ add_executable(testecdsa tests/ecdsa_test.c)
 target_link_libraries(testecdsa OpenSSL::Crypto tworabbits)
 target_include_directories(testecdsa PUBLIC src/algorithms src/logger)
 
-add_executable(benchmark tests/benchmarks/run_benchmarks.c)
+add_executable(benchmark benchmarks/run_benchmarks.c)
 target_link_libraries(benchmark OpenSSL::Crypto tworabbits)
 target_include_directories(benchmark PUBLIC src/algorithms src/logger)
 

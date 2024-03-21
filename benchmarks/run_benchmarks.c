@@ -1,8 +1,8 @@
-#include "../../src/algorithms/advanced_sampling.h"
-#include "../../src/algorithms/rejection_sampling.h"
-#include "../../src/anamorphic_ecdsa/ecdsa.h"
-#include "../../src/logger/logger.h"
-#include "../../src/utils.h"
+#include "../src/algorithms/advanced_sampling.h"
+#include "../src/algorithms/rejection_sampling.h"
+#include "../src/anamorphic_ecdsa/ecdsa.h"
+#include "../src/logger/logger.h"
+#include "../src/utils.h"
 #include <assert.h>
 #include <string.h>
 #include <time.h>
@@ -15,6 +15,15 @@ char* get_random_bits(int n) {
     RAND_bytes((unsigned char*)buf, bytes);
 
     return buf;
+}
+
+void print_array(char* buf, const float* arr, int len) {
+    for (int i = 0; i < len - 1; i++) {
+        // size of each printed float will be 5 bytes - "X.XXX"
+        // + n-1 "," so n*5 + (n-1) * 1 = 6*n - 1
+        sprintf(buf, "%.3f,", arr[i]);
+    }
+    sprintf(buf, "%.3f", arr[len - 1]);
 }
 
 long long get_lut_size(BIGNUM*** lut, int m, int C) {
@@ -339,38 +348,34 @@ int main(int argc, char* argv[]) {
     int repetitions = 1000;
 
     if (arg_benchmark_as) {
-        // try all params
-        if (arg_m_as == 0){
-            for(int i = 1; i < 17; i++) {
-                // not recommended
-                if (arg_C == 0) {
-                    for(int j = 3; j < 21; j++) {
-                        sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", i, j, repetitions);
-                        logger(LOG_INFO, print_buf, "BNCH");
-                        as_benchmark(i, j, repetitions, Y, y, group_2, signing_key, encryption_key);
-                    }
-                }
-                else {
-                    sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", i, arg_C, repetitions);
-                    logger(LOG_INFO, print_buf, "BNCH");
-                    as_benchmark(i, arg_C, repetitions, Y, y, group_2, signing_key, encryption_key); 
-                }
-                               
-            }
-        }
-        else if (arg_C == 0) {
-            for(int j = 3; j < 21; j++) {
-                sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", arg_m_as, j, repetitions);
-                logger(LOG_INFO, print_buf, "BNCH");
-                as_benchmark(arg_m_as, j, repetitions, Y, y, group_2, signing_key, encryption_key);
-            }
-        }
-        else {
-            sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", arg_m_as, arg_C, repetitions);
-            logger(LOG_INFO, print_buf, "BNCH");
-            as_benchmark(arg_m_as, arg_C, repetitions, Y, y, group_2, signing_key, encryption_key);
+        int start_m = 1;
+        int end_m = 17;
+
+        // if m is specified from params, only run for that m
+        if (arg_m_as){
+            start_m = arg_m_as;
+            end_m = arg_m_as + 1;
         }
 
+        int start_C = 3;
+        int end_C = 21;
+
+        // if C is specified from params, only run for that C
+        if (arg_C) {
+            start_C = arg_C;
+            end_C = arg_C + 1;
+        } 
+
+        char time_results[(end_m - start_m) * (end_C - start_C)];
+        char lut_size_results[(end_m - start_m) * (end_C - start_C)];
+
+        for(int m = start_m; m < end_m; m++) {
+            for(int C = start_C; C < end_C; C++/* heh */) {
+                sprintf(print_buf, "Starting as_benchmark with: m=%d, C=%d, repetitions=%d", m, C, repetitions);
+                logger(LOG_INFO, print_buf, "BNCH");
+                as_benchmark(m, C, repetitions, Y, y, group_2, signing_key, encryption_key);
+            }              
+        }
     }
 
     // rs_sign tends to be very slow for b >= 12
@@ -378,18 +383,20 @@ int main(int argc, char* argv[]) {
     repetitions = 100;
 
     if (arg_benchmark_rs) {
-        if (arg_m_rs == 0){
-            for(int i = 1; i < 17; i++) {
-                sprintf(print_buf, "Starting rs_benchmark with: m=%d, repetitions=%d", i, repetitions);
-                logger(LOG_INFO, print_buf, "BNCH");
-                rs_benchmark(i, repetitions, y, group_2, signing_key, encryption_key);
-            }
+        int start_m = 1;
+        int end_m = 17;
+
+        // if m is specified from params, only run for that m
+        if (arg_m_rs){
+            start_m = arg_m_rs;
+            end_m = arg_m_rs + 1;
         }
-        else {
-            sprintf(print_buf, "Starting rs_benchmark with: m=%d, repetitions=%d", arg_m_rs, repetitions);
+
+        for(int m = start_m; m < end_m; m++) {
+            sprintf(print_buf, "Starting rs_benchmark with: m=%d, repetitions=%d", m, repetitions);
             logger(LOG_INFO, print_buf, "BNCH");
-            rs_benchmark(arg_m_rs, repetitions, y, group_2, signing_key, encryption_key);
-        }
+            rs_benchmark(m, repetitions, y, group_2, signing_key, encryption_key);
+        } 
     }
 
     repetitions = 1000;

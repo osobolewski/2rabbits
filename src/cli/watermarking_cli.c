@@ -13,9 +13,11 @@
 
 
 void print_help(const char* prog_name, int print_mask) {
+    printf("CLI tool for anamorphic watermarking/encryption for ECDSA signatures.\n");
+    printf("\nUSAGE:");
+    
     if (print_mask & 0b1) {
-        printf("CLI tool for anamorphic watermarking/encryption for ECDSA signatures.\n");
-        printf("\nUSAGE:\n");
+        printf("\n");
         printf("[1] Generate a lookup table for anamorphic encryption:\n\n");
         printf("%s [-v] g[enerate_lut] '/lut.out' '/path/to/enc_key.pub' (m) [C] 'dual_key'\n", prog_name);
         printf("\n\tPARAMS:\n");
