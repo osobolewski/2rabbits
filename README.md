@@ -110,6 +110,25 @@ watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' '/pa
 ```
 The recovered message should be the same as provided in the signing step. If its not, check if you're using the same `dual_key`, `delta`, `m`, lookup table, keys and of course sign message!
 
+# Benchmarks
+
+To run benchmarks and visualize, first build and cd into the benchmarks folder:
+
+```bash
+cd benchmarks
+```
+
+Then, run all of the benchmarks to generate output csv files:
+
+```bash
+./benchmark -ecdsa && ./benchmark -rs && ./benchmark -as 0 5 && ./benchmark -as 8 0
+```
+
+To visualize benchmark results, run the python script (requires `matplotlib`):
+```bash
+python visualize_benchmarks.py
+```
+
 # Tests
 
 To run tests, first build the binaries and cd into the bin folder
