@@ -63,7 +63,7 @@ void print_help(const char* prog_name, int print_mask) {
 int main(int argc, char *argv[]) {   
     set_verbose(LOG_WARN);
     if (argc < 2) {
-        logger(LOG_ERR, "Incorrect amount of arguments", "CLI");
+        logger(LOG_ERR, "Incorrect number of arguments", "CLI");
         print_help(argv[0], HELP_ALL);
         return -1;
     }
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     int start_index = 1;
     if (argv[1][0] == '-') {
         if (argc < 3) {
-            logger(LOG_ERR, "Incorrect amount of arguments", "CLI");
+            logger(LOG_ERR, "Incorrect number of arguments", "CLI");
             print_help(argv[0], HELP_ALL);
             return -1;
         }
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
 
             break;
         default:
-            logger(LOG_ERR, "Incorrect amount of arguments", "CLI");
+            logger(LOG_ERR, "Incorrect number of arguments", "CLI");
             print_help(argv[0], 0b1);
             return -1;
         }
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
 
             break;
         default:
-            logger(LOG_ERR, "Incorrect amount of arguments", "CLI");
+            logger(LOG_ERR, "Incorrect number of arguments", "CLI");
             print_help(argv[0], 0b10);
             return -1;
         }
@@ -385,7 +385,7 @@ int main(int argc, char *argv[]) {
 
             break;
         default:
-            logger(LOG_ERR, "Incorrect amount of arguments", "CLI");
+            logger(LOG_ERR, "Incorrect number of arguments", "CLI");
             print_help(argv[0], 0b100);
             return -1;
         }
