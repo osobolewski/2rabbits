@@ -25,7 +25,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t(m): Number of bits to be encrypted (width of the anamorphic channel). 0 < m < 17\n");
         printf("\t[C]: [OPTIONAL] Number of records in a row of the lookup table. Default is 5\n");
         printf("\t'dual_key': String used as a dual key to encrypt the anamorphic message.\n");
-        printf("Ex: %s g ./lut.out enc_key.pub 15 10 'Secret key 123'\n", prog_name);
+        printf("Ex: %s g lut.out ./keys/ec-secp256k1-pub-key_enc.pem 16 5 'Secret dual key'\n", prog_name);
     }
 
     if (print_mask & 0b10) {
@@ -41,7 +41,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t'watermark': Message to be encrypted inside of the signature\n");
         printf("\t'dual_key': String used as a dual key to encrypt the 'watermark'\n");
         printf("\t['delta']: [OPTIONAL] Public string to be used for encryption. Default is the timestamp of the signature\n");
-        printf("Ex: %s s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out bb 'testing key' 'Some public string 139992'\n", prog_name);
+        printf("Ex: %s s sign.bin lut.out ./keys/ec-secp256k1-priv-key.pem ./keys/ec-secp256k1-pub-key_enc.pem msg.out bb 'Secret dual key' 'Some unique public string 1'\n", prog_name);
     }
 
     if (print_mask & 0b100) {
@@ -56,7 +56,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t(m): Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 17\n");
         printf("\t'dual_key': String used as a dual key to decrypt the anamorphic message\n");
         printf("\t'delta': Public string to be used for decryption. By default its the timestamp of the signature\n");
-        printf("Ex: %s d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 16 'testing key' 'Some public string 139992'\n", prog_name);
+        printf("Ex: %s d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.out 16 'Secret dual key' 'Some unique public string 1'\n", prog_name);
     }
 }
 
