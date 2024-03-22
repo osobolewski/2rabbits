@@ -3,6 +3,8 @@ A Proof of Concept implementation of the Advanced Rejection Sampling Algorithm f
 
 # Building
 
+The project requires OpenSSL to build. On Ubuntu, you might need `libssl-dev` package.
+
 Run the `install.sh` script;
 
 Next, build with cmake. 
@@ -16,6 +18,27 @@ or e.g. this for debug build (requires `gcc` and `Ninja`):
 ```bash
 cmake -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -B ./build -G Ninja
 cmake --build ./build --config Debug --target all --
+```
+
+### Static linking of OpenSSL
+
+If you want to link OpenSSL statically, use `cmake` with `-DUSE_STATIC_OPENSSL_LIBS=True` and set the location of OpenSSL include directory and the libcrypto library in [CMakeLists.txt](CMakeLists.txt#L11) (it is currently set to standard locations in Arch linux).
+You can find the "OPENSSL_ROOT_DIR" with:
+
+```bash
+openssl version -d
+```
+
+and the "OPENSSL_CRYPTO_LIBRARY" with:
+
+```bash
+find / -name "libcrypto*" 2>/dev/null
+```
+
+After setting the location, run:
+
+```bash
+cmake -B build -DUSE_STATIC_OPENSSL_LIBS=True && cd build && make
 ```
 
 # Watermarking tool
