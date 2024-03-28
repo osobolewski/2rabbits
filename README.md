@@ -63,7 +63,7 @@ watermarking [-v] g[enerate_lut] '/save/path' '/path/to/enc_key.pub' (m) [C] 'du
 1. `[-v]`: [OPTIONAL] verbose mode. `[-vv]` is debug mode
 2. `'/save/path'`: Save location of the generated lookup table.
 3. `'/path/to/enc_key.pub`': Path to PEM-encoded ECDSA public key used to encrypt the anamorphic message
-4. `(m)`: Number of bits to be encrypted (width of the anamorphic channel). 0 < m < 17
+4. `(m)`: Number of bits to be encrypted (width of the anamorphic channel). 0 < m < 32
 5. `[C]`: [OPTIONAL] Number of records in a row of the lookup table. Default is 5
 6. `'dual_key'`: String used as a dual key to encrypt the anamorphic message.
 
@@ -122,7 +122,7 @@ watermarking [-v] d[ecrypt] '/path/to/sign_key.pub' '/path/to/enc_key.priv' '/pa
 3. `'/path/to/enc_key.priv'`: Path to PEM-encoded ECDSA private key used to decrypt the anamorphic message
 4. `'/path/to/sig.bin'`: Path to file containing the signature to verify and decrypt from
 5. `'/path/to/sign_msg.txt'`: Path to file containing message to be verified with the public key\
-6. `(m)`: Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 17
+6. `(m)`: Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 32
 7. `'dual_key'`: String used as a dual key to decrypt the anamorphic message
 8. `'delta'`: Public string to be used for decryption. By default its the timestamp of the signature
 

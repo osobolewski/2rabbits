@@ -24,7 +24,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t[-v]: [OPTIONAL] verbose mode. [-vv] is debug mode\n");
         printf("\t'/lut.out': Save location of the generated lookup table.\n");
         printf("\t'/path/to/enc_key.pub': Path to PEM-encoded ECDSA public key used to encrypt the anamorphic message\n");
-        printf("\t(m): Number of bits to be encrypted (width of the anamorphic channel). 0 < m < 17\n");
+        printf("\t(m): Number of bits to be encrypted (width of the anamorphic channel). 0 < m < 32. Be careful as the size of the table is O(2^m)!\n");
         printf("\t[C]: [OPTIONAL] Number of records in a row of the lookup table. Default is 5\n");
         printf("\t'dual_key': String used as a dual key to encrypt the anamorphic message.\n");
         printf("Ex: %s g lut.out ./keys/ec-secp256k1-pub-key_enc.pem 8 5 'Secret dual key'\n", prog_name);
@@ -55,7 +55,7 @@ void print_help(const char* prog_name, int print_mask) {
         printf("\t'/path/to/enc_key.priv': Path to PEM-encoded ECDSA private key used to decrypt the anamorphic message\n");
         printf("\t'/path/to/sig.bin': Path to file containing the signature to verify and decrypt from\n");
         printf("\t'/path/to/sign_msg.txt': Path to file containing message to be verified with the public key\n");
-        printf("\t(m): Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 17\n");
+        printf("\t(m): Number of bits to be decrypted (width of the anamorphic channel). 0 < m < 32\n");
         printf("\t'dual_key': String used as a dual key to decrypt the anamorphic message\n");
         printf("\t'delta': Public string to be used for decryption. By default its the timestamp of the signature\n");
         printf("Ex: %s d ./keys/ec-secp256k1-pub-key.pem ./keys/ec-secp256k1-priv-key_enc.pem sign.bin msg.test 8 'Secret dual key' 'Some unique public string 1'\n", prog_name);
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        if (m <= 0 || m >= 17 || C <= 0) {
+        if (m <= 0 || m >= 32 || C <= 0) {
             logger(LOG_ERR, "Invalid m or C values", "CLI");
             return -1;
         }
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
 
         logger(LOG_INFO, "Serializing the lookup table...", "CLI");
         char* lut_serialized = NULL;
-        int len;
+        unsigned int len;
         if (lut_serialize(lut, m, C, NULL, &len) < 0) {
             logger(LOG_ERR, "Getting length of serialized buffer failed", "CLI");
             return -1;   
@@ -188,7 +188,7 @@ int main(int argc, char *argv[]) {
         char* sign_key_path;
         char* msg_path;
         char* msg;
-        int msg_len;
+        unsigned int msg_len;
         char* enc_msg;
         char static_delta[25];
         char* delta = "\0";
@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
         }
 
         logger(LOG_INFO, "Opening the lookup table...", "CLI");
-        int lut_serialized_len;
+        unsigned int lut_serialized_len;
         lut_serialized = read_from_file(lut_path, &lut_serialized_len);
 
         logger(LOG_INFO, "Deserializing the lookup table...", "CLI");
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
             logger(LOG_ERR, "Recovering m and C failed", "CLI");
             return -1;   
         }
-        if (m <= 0 || m >= 17 || C <= 0) {
+        if (m <= 0 || m >= 32 || C <= 0) {
             logger(LOG_ERR, "Invalid m or C values", "CLI");
             return -1;
         }
@@ -302,7 +302,7 @@ int main(int argc, char *argv[]) {
                 public_key, group);
 
         logger(LOG_INFO, "Calculating the signature...", "CLI");
-        int sig_len;
+        unsigned int sig_len;
 
         if (!custom_delta) {
             time_t t;
@@ -318,10 +318,10 @@ int main(int argc, char *argv[]) {
         memcpy((void *)&buffer[msg_len], (void *)custom_delta, strlen(custom_delta));
         delta = buffer;
 
-        char* sig = ecdsa_as_sign(sign_key, msg, msg_len,
-                                &sig_len, enc_key, 
-                                enc_msg, strlen(enc_msg), 
-                                dual_key, strlen(dual_key),
+        char* sig = ecdsa_as_sign(sign_key, msg, (int)msg_len,
+                                (int*)&sig_len, enc_key, 
+                                enc_msg, (int)strlen(enc_msg), 
+                                dual_key, (int)strlen(dual_key),
                                 delta, delta_len,
                                 m, C, lut);
 
@@ -406,7 +406,7 @@ int main(int argc, char *argv[]) {
             return -1;
         }
 
-        if (m <= 0 || m >= 17) {
+        if (m <= 0 || m >= 32) {
             logger(LOG_ERR, "Invalid m value", "CLI");
             return -1;
         }

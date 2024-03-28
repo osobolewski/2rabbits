@@ -22,7 +22,7 @@ BIGNUM* rs_encrypt(int m, const char* msg, int msg_len, EC_POINT* Y, EC_GROUP* g
 
     int ok;
 
-    if (Y == NULL || group == NULL || m <= 0 || m >= (1 << 16)) {
+    if (Y == NULL || group == NULL || m <= 0 || m > 31) {
         RS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Encryption parameters invalid or unspecified", "RS");
         return NULL;

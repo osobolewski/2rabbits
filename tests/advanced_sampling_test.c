@@ -49,7 +49,7 @@ int as_test(int m, const char* plaintext, int len) {
 
     logger(LOG_INFO, "Serializing and deserializing the lookup table...", "TEST");
     char* out;
-    int out_len;
+    unsigned int out_len;
     lut_serialize(lut, m, C, NULL, &out_len);
     out = (char*)malloc(out_len*sizeof(char));
     assert(lut_serialize(lut, m, C, out, &out_len) == out_len);

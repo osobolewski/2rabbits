@@ -34,8 +34,8 @@ def time_lossy_fmt(x, pos):
     x /= 60
     return "%3.2f %s" % (x, x_unit[2])
 
-fig_size = [10, 10]
-fig_size_wide = [20, 10]
+fig_size = [8, 8]
+fig_size_wide = [16, 8]
 tight_layout = False
 
 x_m = [i for i in range(1, 17)]

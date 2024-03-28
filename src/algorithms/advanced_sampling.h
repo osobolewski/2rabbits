@@ -36,6 +36,6 @@ void lut_free(BIGNUM*** lut, int m, int C);
 
 BIGNUM* lut_pop(BIGNUM*** lut, int C, size_t row);
 
-int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len);
+int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, unsigned int* out_arr_len);
 
-int lut_deserialize(BIGNUM*** lut, int* m, int* C, const char* in_arr, int in_arr_len);
+int lut_deserialize(BIGNUM*** lut, int* m, int* C, const char* in_arr, unsigned int in_arr_len);

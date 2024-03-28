@@ -118,10 +118,21 @@ int parse_pem_key(const char* path, EVP_PKEY** pkey, int priv);
  * Save byte array in path
  * \return positive value on success
 */
-int save_to_file(const char* in, int in_len, const char* path);
+int save_to_file(const char* in, unsigned int in_len, const char* path);
 
 /*
  * Read a byte array from path
  * \return dynamically allocated buffer for the read bytes
 */
-char* read_from_file(const char* path, int* out_len);
+char* read_from_file(const char* path, unsigned int* out_len);
+
+/*
+ * Pack an array of binary integers into a long
+ * \return packed long
+*/
+long pack_int(const unsigned int* arr, int len);
+
+/*
+ * Unpack a long into an array of binary integers
+*/
+void unpack_int(long packed, unsigned int* arr, int len);
