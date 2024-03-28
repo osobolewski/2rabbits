@@ -24,7 +24,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
         if (K != NULL) free(K);\
         BN_CTX_free(ctx);
 
-    if (Y == NULL || group == NULL || m <= 0 || m > 16 || C <= 0 || delta == NULL || msg == NULL) {
+    if (Y == NULL || group == NULL || m <= 0 || m > 31 || C <= 0 || delta == NULL || msg == NULL) {
         AS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Encryption parameters invalid or unspecified", "AS");
         return NULL;
@@ -47,7 +47,9 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
 
     // Set the FPE key
     FPE_KEY K_ff3;
-    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, (const unsigned char*)"tweak", (1 << m), &K_ff3);
+
+    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, (const unsigned char*)"tweak", 2, &K_ff3);    
+
     if (ok < 0) {
         AS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "FPE set key failed", "AS");
@@ -55,22 +57,24 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     }
 
     // FPE encrypt
-    unsigned int fpe_input[1] = {0};
-    unsigned int fpe_output[1];
+    unsigned int fpe_input[m];
+    unsigned int fpe_output[m];
     unsigned int i0;
     unsigned int i1;
     
-    
     // i0 = ENC(w || 0)
-    fpe_input[0] = (w << 1);
-    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_ENCRYPT);
-    i0 = fpe_output[0];
+    long w0 = (long)(w << 1);
+    unpack_int(w0, fpe_input, m);
+    FPE_ff3_encrypt(fpe_input, fpe_output, m, &K_ff3, FPE_ENCRYPT);
+    i0 = pack_int(fpe_output, m);
+    
     // i0 = ENC(w || 1)
-    fpe_input[0] = (w << 1) | 1;
-    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_ENCRYPT);
-    i1 = fpe_output[0];
+    long w1 = (long)((w << 1) | 1);
+    unpack_int(w1, fpe_input, m);
+    FPE_ff3_encrypt(fpe_input, fpe_output, m, &K_ff3, FPE_ENCRYPT);
+    i1 = pack_int(fpe_output, m);
 
-    FPE_unset_ff1_key(&K_ff3);
+    FPE_unset_ff3_key(&K_ff3);
 
     int free_slots_i0 = lut_free_slots_row(lut[i0], C);
     int free_slots_i1 = lut_free_slots_row(lut[i1], C);
@@ -116,7 +120,7 @@ BIGNUM* as_encrypt(BIGNUM*** lut, int m, int C, const char* msg, int msg_len, co
     int d;
     int b = msb;
 
-    if (Y == NULL || group == NULL || m <= 0 || m > 16 || delta == NULL) {
+    if (Y == NULL || group == NULL || m <= 0 || m > 31 || delta == NULL) {
         AS_2R_ENCRYPT_CLEANUP
         AS_ENCRYPT_CLEANUP;
         logger(LOG_ERR, "Encryption parameters invalid or unspecified", "AS");
@@ -305,23 +309,26 @@ char* as_decrypt(int m, const char* delta, int delta_len, const char* dkey, int 
 
     // Set the FPE key
     FPE_KEY K_ff3;
-    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, "tweak", (1 << m), &K_ff3);
+    ok = FPE_set_ff3_key((unsigned char*)K, K_len * 8, (const unsigned char*)"tweak", 2, &K_ff3);    
     if (ok < 0) {
         AS_DECRYPT_CLEANUP;
         logger(LOG_ERR, "FPE set key failed", "AS");
         return NULL;
     }
 
-    unsigned int fpe_input[1] = {(unsigned int)z};
-    unsigned int fpe_output[1];
+    unsigned int fpe_input[m];
+    unsigned int fpe_output[m];
+
+    unpack_int(z, fpe_input, m);
 
     // FPE decrypt
-    FPE_ff3_encrypt(fpe_input, fpe_output, 1, &K_ff3, FPE_DECRYPT);
-    w = fpe_output[0];
+    FPE_ff3_encrypt(fpe_input, fpe_output, m, &K_ff3, FPE_DECRYPT);
+    w = pack_int(fpe_output, m);
 
-    FPE_unset_ff1_key(&K_ff3);
+    FPE_unset_ff3_key(&K_ff3);
 
-    w = (w >> 1) | (b << (m - 1));
+    // w = b || (Dec(z) >> 1)
+    w = (b << (m - 1)) | (w >> 1);
 
     sprintf(print_buf,  "Recovered msg: %lu", w);
     logger(LOG_DBG, print_buf, "AS");
@@ -539,7 +546,7 @@ void as_fill(BIGNUM*** lut, int m, int C, const char* dkey, int dkey_len, EC_POI
 
     // small optimization - we can track the number of empty slots
     // globally with a counter instead of checking the array
-    // should not overflow as the upper boundary of m is 16 bits
+    // should not overflow as the upper boundary of m is 31 bits
     long long slots_to_fill = rows * C;
 
     while (slots_to_fill > 0) {
@@ -579,6 +586,11 @@ int lut_push(BIGNUM*** lut, int C, size_t row, BIGNUM* num) {
 }
 
 BIGNUM*** lut_new(int m, int C) {
+    if (m <= 0 || C <= 0 || m > 31) {
+        logger(LOG_ERR, "Invalid parameters for LUT creation", "AS");
+        return NULL;
+    }
+
     // 2^m
     size_t n_rows = ((size_t)1 << m);
     size_t n_row_elements = (size_t)C * 2;
@@ -625,7 +637,7 @@ BIGNUM* lut_pop(BIGNUM*** lut, int C, size_t row) {
     return NULL;
 }
 
-int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len) {
+int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, unsigned int* out_arr_len) {
     size_t n_rows = ((size_t)1 << m);
     size_t n_row_elements = (size_t)C * 2;
 
@@ -635,7 +647,7 @@ int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len) 
 
     // first, a dry run is necessary to calculate the number of bytes required; 
     // first two values serialized are m and C
-    int len_req = 2 * sizeof(int);
+    unsigned int len_req = 2 * sizeof(int);
     for(size_t i = 0; i < n_rows; i++) {
         for (size_t j = 0; j < n_row_elements; j++) {
             // for len
@@ -678,7 +690,7 @@ int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len) 
                 bytes_written += sizeof(int);
 
                 // then, write the bignum itself
-                BN_bn2bin(lut[i][j], &out_arr[bytes_written]); 
+                BN_bn2bin(lut[i][j], (unsigned char*)&out_arr[bytes_written]); 
                 bytes_written += len;
             } else {
                 // if number is NULL, write len=0
@@ -692,15 +704,26 @@ int lut_serialize(BIGNUM*** lut, int m, int C, char* out_arr, int* out_arr_len) 
     return bytes_written;
 }
 
-int lut_deserialize(BIGNUM*** lut,int* m, int* C, const char* in_arr, int in_arr_len) {
+int lut_deserialize(BIGNUM*** lut, int* m, int* C, const char* in_arr, unsigned int in_arr_len) {
     // first, recover m and C
-    int bytes_read = 0;
+    unsigned long bytes_read = 0;
+    unsigned long bytes_to_read = 0;
     
     int m_read = 0;
+
+    if (bytes_read + sizeof(int) > in_arr_len) {
+        return -1;
+    }
+
     memcpy((void*)&m_read, (void*)&in_arr[bytes_read], sizeof(int));
     bytes_read += sizeof(int);
 
     int C_read = 0;
+
+    if (bytes_read + sizeof(int) > in_arr_len) {
+        return -1;
+    }
+
     memcpy((void*)&C_read, (void*)&in_arr[bytes_read], sizeof(int));
     bytes_read += sizeof(int);
 
@@ -724,12 +747,22 @@ int lut_deserialize(BIGNUM*** lut,int* m, int* C, const char* in_arr, int in_arr
         for (size_t j = 0; j < n_row_elements; j++) {
             // first check length of the bignum
             int len;
+
+            if (bytes_read + sizeof(int) > in_arr_len) {
+                return -1;
+            }
+
             memcpy((void*)&len, (void*)&in_arr[bytes_read], sizeof(int));
             bytes_read += sizeof(int);
 
             // if len = 0, then bignum is NULL, so
             // we are only concerned with len != 0
             if (len != 0) {
+                if (bytes_read + len > in_arr_len) {
+                    lut_free(lut, (int)i, *C);
+                    return -2;
+                }
+
                 lut[i][j] = BN_new();
                 BN_bin2bn((unsigned char*)&in_arr[bytes_read], len, lut[i][j]);
                 bytes_read += len;

@@ -412,7 +412,7 @@ int point_2_buffer(char* buffer, size_t len, EC_POINT* point, EC_GROUP* group, B
     return ok;   
 }
 
-int save_to_file(const char* in, int in_len, const char* path) {
+int save_to_file(const char* in, unsigned int in_len, const char* path) {
     FILE* f = fopen(path,"wb");
 
     if (!f) {
@@ -425,7 +425,7 @@ int save_to_file(const char* in, int in_len, const char* path) {
     return ret;
 }
 
-char* read_from_file(const char* path, int* out_len) {
+char* read_from_file(const char* path, unsigned int* out_len) {
     FILE* f = fopen(path,"rb");
 
     if (!f) {
@@ -438,7 +438,7 @@ char* read_from_file(const char* path, int* out_len) {
 
     char* buf = (char*)malloc(len*sizeof(char));
 
-    int ret = fread(buf, sizeof(char), len, f);
+    unsigned int ret = fread(buf, sizeof(char), len, f);
     fclose(f);
     
     if (ret < 0) {
@@ -448,4 +448,21 @@ char* read_from_file(const char* path, int* out_len) {
 
     *out_len = ret;
     return buf;
+}
+
+long pack_int(const unsigned int* arr, int len) {
+    long result = 0;
+
+    // assume little endian
+    for (int i = 0; i < len; i++) {
+        result |= arr[i] << (i);
+    }
+
+    return result;
+}
+
+void unpack_int(long packed, unsigned int* arr, int len) {
+    for (int i = 0; i < len; i++) {
+        arr[i] = (packed >> i) & 1;
+    }
 }
