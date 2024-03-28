@@ -183,12 +183,12 @@ ydata = [y_as_sign, y_as_verif, y_as_fill,  y_as_lut_size]
 ylabel = ["Time", "Time", "Time (log scale)",  "Size (log scale)"]
 ylim = [(0, 2), (0, 2), (0.1, 10 ** 6), (100, 10 ** 8)]
 scale = ["linear", "linear", "log",  "log"]
-fig.suptitle(f'Advanced Sampling benchmarks with variable m, constant C = {const_C}', fontsize=16)
+fig.suptitle(f'Advance Sampling benchmarks with variable m, constant C = {const_C}', fontsize=16)
 
-titles = ["Advanced Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
-          "Advanced Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
-          "Advanced Sampling FILL time",
-          "Advanced Sampling LUT size"]
+titles = ["Advance Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
+          "Advance Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
+          "Advance Sampling FILL time",
+          "Advance Sampling LUT size"]
 fmt = [time_fmt, time_fmt, time_fmt, sizeof_fmt]
 for i in range(4):
     ax = axes[i%2][i//2]
@@ -237,12 +237,12 @@ ydata = [y_as_sign_const_m, y_as_verif_const_m, y_as_fill_const_m,  y_as_lut_siz
 ylabel = ["Time", "Time", "Time",  "Size"]
 ylim = [(0, 2), (0, 2), (0, 2500), (25000, 170000)]
 scale = ["linear", "linear", "linear",  "linear"]
-fig.suptitle(f'Advanced Sampling benchmarks with variable C, constant m = {const_m}', fontsize=16)
+fig.suptitle(f'Advance Sampling benchmarks with variable C, constant m = {const_m}', fontsize=16)
 
-titles = ["Advanced Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
-          "Advanced Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
-          "Advanced Sampling FILL time",
-          "Advanced Sampling LUT size"]
+titles = ["Advance Sampling SIGN [+ INSERT + ENCRYPT] time (average from n = 1000)", 
+          "Advance Sampling VERIFY [+ DECRYPT] time (average from n = 1000)",
+          "Advance Sampling FILL time",
+          "Advance Sampling LUT size"]
 fmt = [time_fmt, time_fmt, time_fmt, sizeof_fmt]
 for i in range(4):
     ax = axes[i%2][i//2]
@@ -306,12 +306,12 @@ xdata = x_m
 l1 = ax.scatter(xdata, y_rs_sign, color="red", label ='Rejection Sampling')
 l2 = ax.plot(xdata, y_rs_sign, color="red", linestyle="dashed", linewidth=0.5)
 
-l3 = ax.scatter(xdata, y_as_sign, color="blue", label='Advanced Sampling', marker="v")
+l3 = ax.scatter(xdata, y_as_sign, color="blue", label='Advance Sampling', marker="v")
 l4 = ax.plot(xdata, y_as_sign, color="blue", linestyle="dashed", linewidth=0.5)
 
 l5 = ax.plot(xdata, y_baseline_sign, color="green", linewidth=2.5, label='Pure ECDSA')
 
-#ax.legend([l1, l3, l5], [, 'Advanced Sampling', 'Pure ECDSA'])
+#ax.legend([l1, l3, l5], [, 'Advance Sampling', 'Pure ECDSA'])
 ax.legend()
 
 # set the basic properties
@@ -351,7 +351,7 @@ ax.yaxis.set_major_formatter(ticker.FuncFormatter(time_fmt))
 l1 = ax.scatter(xdata, y_rs_verif, color="red", label ='Rejection Sampling')
 l2 = ax.plot(xdata, y_rs_verif, color="red", linestyle="dashed", linewidth=0.5)
 
-l3 = ax.scatter(xdata, y_as_verif, color="blue", label='Advanced Sampling', marker="v")
+l3 = ax.scatter(xdata, y_as_verif, color="blue", label='Advance Sampling', marker="v")
 l4 = ax.plot(xdata, y_as_verif, color="blue", linestyle="dashed", linewidth=0.5)
 
 l5 = ax.plot(xdata, y_baseline_verif, color="green", linewidth=2.5, label='Pure ECDSA')
