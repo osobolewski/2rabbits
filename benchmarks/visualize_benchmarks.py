@@ -125,6 +125,21 @@ y_baseline_verif = [y_baseline_verif[0] for x in range(1, 17)]
 print(y_baseline_sign)
 print(y_baseline_verif)
 
+
+lut_x = [i for i in range(1, 17)]
+lut_C = 5
+lut_entries = []
+
+with open("lut_balance_benchmark_results.out", "r") as f:
+    column_names = f.readline().strip().split(",")
+    for i, line in enumerate(f):
+        vals = line.strip().split("[")[0].split(",")[:-1]
+        entries = line.strip().split("[")[1].strip("]").split(",")
+        if int(lut_x[i] != int(vals[0]) or len(vals) != 2):
+            print("Error in input file")
+            exit(0)
+        lut_entries.append([int(e) for e in entries])
+
 fig, axes = plt.subplots(2, 1, figsize=fig_size, tight_layout=tight_layout)
 #axes[0,1].set_axis_off()
 #axes[1,1].set_axis_off()
@@ -134,7 +149,7 @@ ydata = [y_rs_sign, y_rs_verif]
 ylabel = ["Time (log scale)", "Time"]
 ylim = [(0.1, 10 ** 4), (0, 2)]
 scale = ["log", "linear"]
-titles = ["Rejection Sampling SIGN [+ ENCRYPT] time (average from n = 100)", "Rejection Sampling VERIFY [+ DECRYPT] time (average from n = 100)"]
+titles = ["Rejection Sampling SIGN [+ ENCRYPT] time (average from n = 1000)", "Rejection Sampling VERIFY [+ DECRYPT] time (average from n = 1000)"]
 fmt = [time_lossy_fmt, time_fmt]
 for i in range(2):
     ax = axes[i]
@@ -382,3 +397,37 @@ ttl.set_weight('bold')
 
 fig.savefig("All.png")
 #plt.show()
+
+fig, axes = plt.subplots(1, 1, figsize=fig_size_wide, tight_layout=tight_layout)
+#axes[0,1].set_axis_off()
+
+ax = axes
+bins = [i for i in range(0, lut_C*2+2)]
+print(bins)
+plt.xticks(bins, bins, size=15)
+plt.yticks(size=15)
+values, bins, bars = ax.hist(lut_entries[15], alpha=1, histtype='barstacked', align="left", rwidth=0.8, bins=bins, linewidth=1.5, edgecolor='black', color='blueviolet')
+
+# set the basic properties
+ax.set_xlabel('Number of entries in the Lookup Table row')
+ax.set_ylabel("Count")
+ax.set_title("Lookup Table entries distribution for m = 16, C = 5, n = 100 000", size=20)
+
+# tweak the axis labels
+xlab = ax.xaxis.get_label()
+ylab = ax.yaxis.get_label()
+
+xlab.set_style('italic')
+xlab.set_size(18)
+ylab.set_style('italic')
+ylab.set_size(18)
+
+# tweak the title
+ttl = ax.title
+ttl.set_weight('bold')
+
+# add labels
+
+plt.bar_label(bars, fontsize=20, color='black')
+
+fig.savefig("LUT_hist.png")

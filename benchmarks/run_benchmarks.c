@@ -26,6 +26,13 @@ void print_array(char* buf, const float* arr, int len) {
     sprintf(buf, "%.3f", arr[len - 1]);
 }
 
+void print_array_fp(FILE* fp, const long* arr, int len) {
+    for (int i = 0; i < len - 1; i++) {
+        fprintf(fp, "%ld,", arr[i]);
+    }
+    fprintf(fp, "%ld", arr[len - 1]);
+}
+
 long long get_lut_size(BIGNUM*** lut, int m, int C) {
     int rows = (1 << m);
     int columns = 2 * C;
@@ -46,6 +53,82 @@ long long get_lut_size(BIGNUM*** lut, int m, int C) {
     }
 
     return size;
+}
+
+void get_lut_entries(BIGNUM*** lut, int m, int C, long* entries) {
+    int rows = (1 << m);
+    int columns = 2 * C;
+
+    // long* entries = (long*)malloc(rows*sizeof(long));
+    for (int i = 0; i < rows; i++) {
+        entries[i] = 0;
+    }
+
+    for (int i = 0; i < rows; i ++) {
+        for (int j = 0; j < columns; j++) {
+            entries[i] += lut[i][j] != NULL;
+        }
+    }
+}
+
+// benchmark insertion and retrieval of LUT entries
+void lut_balance_benchmark(int m, int C, int repetitions,
+                  EC_POINT* Y, BIGNUM* y, EC_GROUP* group, 
+                  EVP_PKEY* signing_key, EVP_PKEY* encryption_key, 
+                  long* entries) {
+    char print_buf[200];
+    const char dkey[] = "dual key";
+
+    BIGNUM*** lut = lut_new(m, C);
+    as_fill(lut, m, C, dkey, strlen(dkey), Y, group);
+    
+    logger(LOG_INFO, "LUT filled", "BNCH");
+
+    char* sign_message = (char*)malloc(100*sizeof(char));
+    char* enc_message;
+
+    for (int i = 0; i < repetitions; i++) {
+        // prepare messages
+        // we can do it in a loop because we don't need to store them
+        // and we are not measuring the time 
+        sprintf(sign_message, "Message: %d", i);
+        enc_message = get_random_bits(m);
+
+        char* signature;
+        int signature_len;
+
+        // insert
+        as_insert(lut, m, C, 0, dkey, strlen(dkey), Y, group);
+        // then sign
+        signature = ecdsa_as_sign(signing_key, 
+                            sign_message, strlen(sign_message), 
+                            &signature_len, encryption_key, 
+                            enc_message, bit_2_byte_len(m), 
+                            dkey, strlen(dkey), 
+                            sign_message, strlen(sign_message), 
+                            m, C, lut);
+
+        EC_POINT* rs = EC_POINT_new(group);
+
+        // verify signatures, recover plaintexts
+        assert(ecdsa_verify_full(signing_key, sign_message, strlen(sign_message), signature, signature_len, &rs) == 1);
+        char* plaintext = as_decrypt(m, sign_message, strlen(sign_message), dkey, strlen(dkey), rs, y, group);
+
+        // assert that the decryptions were successful
+        assert(compare_n_lsb(plaintext, bit_2_byte_len(m), enc_message, bit_2_byte_len(m), m) == 0);
+
+        EC_POINT_free(rs);
+        free(plaintext);
+        free(signature);
+        free(enc_message);
+    }
+
+    logger(LOG_INFO, "Signing done.", "BNCH");
+
+    // get number of entries in each row
+    get_lut_entries(lut, m, C, entries);
+
+    free(sign_message);
 }
 
 void as_benchmark(int m, int C, int repetitions, 
@@ -82,7 +165,7 @@ void as_benchmark(int m, int C, int repetitions,
         messages_enc[i] = get_random_bits(m);
     }
 
-    // store signatures for verifications
+    // store signatures for verification
     char* signatures[repetitions];
     int signature_lens[repetitions];
 
@@ -252,6 +335,8 @@ int main(int argc, char* argv[]) {
     int arg_benchmark_as = 0;
     int arg_benchmark_rs = 0;
     int arg_benchmark_ecdsa = 0;
+    int arg_benchmark_lut = 0;
+
     int arg_m_as = 0;
     int arg_m_rs = 0;
     int arg_C = 0;
@@ -262,6 +347,7 @@ int main(int argc, char* argv[]) {
         arg_benchmark_as = 1;
         arg_benchmark_rs = 1;
         arg_benchmark_ecdsa = 1;
+        arg_benchmark_lut = 1;
     }
     else {
         for(int i = 1; i < argc; i++){
@@ -303,6 +389,9 @@ int main(int argc, char* argv[]) {
                 else if (arg[0] == 'e') {
                     arg_benchmark_ecdsa = 1;
                 }
+                else if (arg[0] == 'l') {
+                    arg_benchmark_lut = 1;
+                }
                 else if (arg[0] == 'v') {
                     set_verbose(LOG_DBG);
                 }
@@ -316,6 +405,7 @@ int main(int argc, char* argv[]) {
                     printf("\t-ac: run advanced sampling benchmark. If m or C are omitted or 0, run for m = [1-16] and C = [3-20].\n");
                     printf("\t-rs: run rejection sampling benchmark. If m is omitted or 0, run for m = [1-16] \n");
                     printf("\t-ecdsa: run pure ecdsa benchmark.\n");
+                    printf("\t-lut: run LUT balance benchmark.\n");
                     printf("\t-v: verbose (debug) mode - warning: its VERY verbose\n");
                     printf("If all arguments (besides -v) are omitted then all tests with all param values are run.\n");
                     printf("ex. usage:\n");
@@ -353,7 +443,7 @@ int main(int argc, char* argv[]) {
     EC_GROUP* group_2 = NULL;
 
     // encryption key
-    if (arg_benchmark_as || arg_benchmark_rs) {
+    if (arg_benchmark_as || arg_benchmark_rs || arg_benchmark_lut) {
         logger(LOG_INFO, "Generating encryption keys...", "BNCH");
         ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_EC, NULL);
         EVP_PKEY_keygen_init(ctx);
@@ -442,9 +532,7 @@ int main(int argc, char* argv[]) {
         fclose(fp);
     }
 
-    // rs_sign tends to be very slow for b >= 12
-    // as its time complexity is O(2^b)
-    repetitions = 100;
+    repetitions = 1000;
 
     if (arg_benchmark_rs) {
         int start_m = 1;
@@ -506,6 +594,63 @@ int main(int argc, char* argv[]) {
         fprintf(fp, "sign_time,verify_time\n");
         fprintf(fp, "%.3f,%.3f\n", sign_time, verify_time);
         fclose(fp);
+    }
+
+    if (arg_benchmark_lut) {
+        repetitions = 100000;
+
+        int start_m = 1;
+        int end_m = 17;
+
+        int start_C = 5;
+        int end_C = 6;
+        
+        long* entries_results[(end_m - start_m) * (end_C - start_C)];
+
+        for (int m = start_m; m < end_m; m++) {
+            for (int C = start_C; C < end_C; C++) {
+                int current_m = m - start_m;
+                int current_C = C - start_C;
+                int current_index = current_m*(end_C - start_C) + current_C;
+
+                sprintf(print_buf, "Starting lut_balance_benchmark with: m=%d, C=%d, repetitions=%d", m, C, repetitions);
+                logger(LOG_INFO, print_buf, "BNCH");
+                long* entries = (long*)malloc((1 << m)*sizeof(long));
+                entries_results[current_index] = entries;
+
+                lut_balance_benchmark(m, C, repetitions, Y, y, group_2, signing_key, encryption_key, entries);
+
+                for (int i = 0; i < (1 << m); i++) {
+                    if (entries[i] == 0) {
+                        sprintf(print_buf, "empty LUT row for m=%d, C=%d, row=%d: %ld entries", m, C, i, entries[i]);
+                        logger(LOG_INFO, print_buf, "BNCH");
+                    }
+                }
+            }
+        }
+
+        FILE* fp = fopen("lut_balance_benchmark_results.out", "w");
+        if (fp == NULL) {
+            logger(LOG_ERR, "Error opening file for writing", "BNCH");
+            return 1;
+        }
+
+        fprintf(fp, "m,C,[entries]\n");
+        for (int m = start_m; m < end_m; m++) {
+            for (int C = start_C; C < end_C; C++) {
+                int current_m = m - start_m;
+                int current_C = C - start_C;
+                int current_index = current_m*(end_C - start_C) + current_C;
+
+                sprintf(print_buf, "%d,%d,[", m, C);
+                fprintf(fp, "%s", print_buf);
+                print_array_fp(fp, entries_results[current_index], 1 << m);
+                fprintf(fp, "]\n");
+
+                free(entries_results[current_index]);
+            }
+        }
+
     }
 
     EVP_PKEY_free(signing_key);
