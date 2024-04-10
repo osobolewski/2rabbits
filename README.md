@@ -144,7 +144,7 @@ cd benchmarks
 Then, run all of the benchmarks to generate output csv files:
 
 ```bash
-./benchmark -ecdsa && ./benchmark -rs && ./benchmark -as 0 5 && ./benchmark -as 8 0
+./benchmark -ecdsa && ./benchmark -rs && ./benchmark -as 0 5 && ./benchmark -as 8 0 && ./benchmark -lut 
 ```
 
 To visualize benchmark results, run the python script (requires `matplotlib` and `numpy`):

@@ -126,7 +126,7 @@ print(y_baseline_sign)
 print(y_baseline_verif)
 
 
-lut_x = [i for i in range(1, 17)]
+lut_m = 0
 lut_C = 5
 lut_entries = []
 
@@ -135,9 +135,13 @@ with open("lut_balance_benchmark_results.out", "r") as f:
     for i, line in enumerate(f):
         vals = line.strip().split("[")[0].split(",")[:-1]
         entries = line.strip().split("[")[1].strip("]").split(",")
-        if int(lut_x[i] != int(vals[0]) or len(vals) != 2):
+        if (len(vals) != 2):
             print("Error in input file")
             exit(0)
+        # use the highest m
+        lut_m = max(lut_m, int(vals[0]))
+        lut_C = int(vals[1])
+
         lut_entries.append([int(e) for e in entries])
 
 fig, axes = plt.subplots(2, 1, figsize=fig_size, tight_layout=tight_layout)
@@ -406,12 +410,12 @@ bins = [i for i in range(0, lut_C*2+2)]
 print(bins)
 plt.xticks(bins, bins, size=15)
 plt.yticks(size=15)
-values, bins, bars = ax.hist(lut_entries[15], alpha=1, histtype='barstacked', align="left", rwidth=0.8, bins=bins, linewidth=1.5, edgecolor='black', color='blueviolet')
+values, bins, bars = ax.hist(lut_entries[-1], alpha=1, histtype='barstacked', align="left", rwidth=0.8, bins=bins, linewidth=1.5, edgecolor='black', color='blueviolet')
 
 # set the basic properties
 ax.set_xlabel('Number of entries in the Lookup Table row')
 ax.set_ylabel("Count")
-ax.set_title("Lookup Table entries distribution for m = 16, C = 5, n = 100 000", size=20)
+ax.set_title(f"Lookup Table entries distribution for m = {lut_m}, C = {lut_C}, n = 100 000", size=20)
 
 # tweak the axis labels
 xlab = ax.xaxis.get_label()

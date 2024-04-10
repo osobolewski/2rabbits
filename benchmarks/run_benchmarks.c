@@ -339,7 +339,9 @@ int main(int argc, char* argv[]) {
 
     int arg_m_as = 0;
     int arg_m_rs = 0;
+    int arg_m_lut = 0;
     int arg_C = 0;
+    int arg_C_lut = 0;
     char print_buf[200];
 
     // run all benchmarks
@@ -391,6 +393,22 @@ int main(int argc, char* argv[]) {
                 }
                 else if (arg[0] == 'l') {
                     arg_benchmark_lut = 1;
+                    // m specified
+                    if (i + 1 < argc && argv[i+1][0] != '-') {
+                        arg_m_lut = atoi(argv[i+1]);
+                        if (arg_m_lut > 16 || arg_m_lut < 0) {
+                            inp_err = 1;
+                            printf("Error: use 0 < m < 17\n");
+                        }
+                    }
+                    // C specified
+                    if (i + 2 < argc && argv[i+2][0] != '-') {
+                        arg_C_lut = atoi(argv[i+2]);
+                        if (arg_C_lut < 0) {
+                            inp_err = 1;
+                            printf("Error: use C >= 0\n");
+                        }
+                    }
                 }
                 else if (arg[0] == 'v') {
                     set_verbose(LOG_DBG);
@@ -401,11 +419,11 @@ int main(int argc, char* argv[]) {
                 }
                 // -help or -h
                 if (inp_err || arg[0] == 'h') {
-                    printf("%s usage: [-as (m) (C)] [-rs] [-ecdsa] [-v]\n", argv[0]);
+                    printf("%s usage: [-as (m) (C)] [-rs] [-ecdsa] [-lut (m) (C)] [-v]\n", argv[0]);
                     printf("\t-ac: run advanced sampling benchmark. If m or C are omitted or 0, run for m = [1-16] and C = [3-20].\n");
                     printf("\t-rs: run rejection sampling benchmark. If m is omitted or 0, run for m = [1-16] \n");
                     printf("\t-ecdsa: run pure ecdsa benchmark.\n");
-                    printf("\t-lut: run LUT balance benchmark.\n");
+                    printf("\t-lut: run LUT balance benchmark. If m or C are omitted, run for m = [1-16] and C = 5.\n");
                     printf("\t-v: verbose (debug) mode - warning: its VERY verbose\n");
                     printf("If all arguments (besides -v) are omitted then all tests with all param values are run.\n");
                     printf("ex. usage:\n");
@@ -602,8 +620,19 @@ int main(int argc, char* argv[]) {
         int start_m = 1;
         int end_m = 17;
 
+        if (arg_m_lut){
+            start_m = arg_m_lut;
+            end_m = arg_m_lut + 1;
+        }
+
+
         int start_C = 5;
         int end_C = 6;
+
+        if (arg_C_lut) {
+            start_C = arg_C_lut;
+            end_C = arg_C_lut + 1;
+        } 
         
         long* entries_results[(end_m - start_m) * (end_C - start_C)];
 
