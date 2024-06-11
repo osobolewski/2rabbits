@@ -5,7 +5,7 @@ A Proof of Concept implementation of the Advanced Rejection Sampling Algorithm f
 
 The project requires OpenSSL to build. On Ubuntu, you might need `libssl-dev` package.
 
-Run the `install.sh` script;
+Run the `install.sh` script (requires `make` and `gcc/clang`);
 
 Next, build with cmake. 
 If you don't know how, you can use this (requires `gcc/clang` and `make`):
